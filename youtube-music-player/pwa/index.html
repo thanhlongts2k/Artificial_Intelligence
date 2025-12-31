@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="YouTube Music Player - Nghe nhạc theo tâm trạng">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Play Music">
+
+    <title>Play Music</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎵 Play Music</h1>
+            <p class="subtitle">Hôm nay bạn muốn nghe gì?</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="mood">🎭 Tâm trạng</button>
+            <button class="tab-btn" data-tab="purpose">🎯 Mục đích</button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="tab-content">
+            <!-- Mood Tab -->
+            <section id="mood" class="tab-panel active">
+                <div class="button-grid">
+                    <button class="music-btn" data-category="happy" style="--btn-color: #FFD93D; --btn-hover: #FFC300;">
+                        <span class="btn-icon">☀️</span>
+                        <span class="btn-text">Vui vẻ</span>
+                    </button>
+                    <button class="music-btn" data-category="sad" style="--btn-color: #6C5CE7; --btn-hover: #5B4CC4;">
+                        <span class="btn-icon">💧</span>
+                        <span class="btn-text">Buồn</span>
+                    </button>
+                    <button class="music-btn" data-category="chill" style="--btn-color: #00CEC9; --btn-hover: #00B5B0;">
+                        <span class="btn-icon">🍃</span>
+                        <span class="btn-text">Chill</span>
+                    </button>
+                    <button class="music-btn" data-category="energy"
+                        style="--btn-color: #FF6B6B; --btn-hover: #EE5A5A;">
+                        <span class="btn-icon">⚡</span>
+                        <span class="btn-text">Năng lượng</span>
+                    </button>
+                    <button class="music-btn" data-category="romantic"
+                        style="--btn-color: #FD79A8; --btn-hover: #E96A95;">
+                        <span class="btn-icon">💕</span>
+                        <span class="btn-text">Lãng mạn</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Purpose Tab -->
+            <section id="purpose" class="tab-panel">
+                <div class="button-grid">
+                    <button class="music-btn" data-category="brainrot"
+                        style="--btn-color: #E84393; --btn-hover: #D63384;">
+                        <span class="btn-icon">🧠</span>
+                        <span class="btn-text">Audio mất não</span>
+                    </button>
+                    <button class="music-btn" data-category="work" style="--btn-color: #74B9FF; --btn-hover: #5DA7F0;">
+                        <span class="btn-icon">💼</span>
+                        <span class="btn-text">Làm việc</span>
+                    </button>
+                    <button class="music-btn" data-category="gym" style="--btn-color: #E17055; --btn-hover: #D05F45;">
+                        <span class="btn-icon">🏃</span>
+                        <span class="btn-text">Tập gym</span>
+                    </button>
+                    <button class="music-btn" data-category="relax" style="--btn-color: #A29BFE; --btn-hover: #8B83E8;">
+                        <span class="btn-icon">😴</span>
+                        <span class="btn-text">Thư giãn</span>
+                    </button>
+                    <button class="music-btn" data-category="party" style="--btn-color: #FDCB6E; --btn-hover: #F0BE5E;">
+                        <span class="btn-icon">🎉</span>
+                        <span class="btn-text">Tiệc tùng</span>
+                    </button>
+                    <button class="music-btn" data-category="drive" style="--btn-color: #55A3FF; --btn-hover: #4090E8;">
+                        <span class="btn-icon">🚗</span>
+                        <span class="btn-text">Lái xe</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Random Button -->
+        <footer class="footer">
+            <button class="random-btn" id="randomBtn">
+                🎲 NGẪU NHIÊN
+            </button>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Đang mở YouTube...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
