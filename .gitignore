@@ -1,6 +1,11 @@
 # Ignore folders
 flappy-bird/
 
+# Build outputs
+**/dist/
+**/build/
+**/*.spec
+
 # Python
 __pycache__/
 *.pyc
