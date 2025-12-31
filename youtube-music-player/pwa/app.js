@@ -259,7 +259,7 @@ function showInstallPrompt() {
         prompt.className = 'install-prompt show';
         prompt.innerHTML = `
             <div class="install-content">
-                <span class="install-icon">�</span>
+                <span class="install-icon">📱</span>
                 <div class="install-text">
                     <strong>Cài đặt ứng dụng</strong>
                     <p>Thêm vào màn hình chính để trải nghiệm tốt hơn!</p>
