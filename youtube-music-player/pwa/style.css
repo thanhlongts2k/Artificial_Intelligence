@@ -265,42 +265,91 @@ body {
 /* ==================== Install Prompt (PWA) ==================== */
 .install-prompt {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    background: var(--bg-card);
-    padding: 16px;
-    border-radius: var(--border-radius);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+    padding: 20px;
     display: none;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.4);
     z-index: 999;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
 }
 
 .install-prompt.show {
     display: flex;
 }
 
-.install-prompt p {
+.install-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.install-icon {
+    font-size: 2.5rem;
+}
+
+.install-text {
     flex: 1;
-    font-size: 0.9rem;
+}
+
+.install-text strong {
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.install-text p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.install-actions {
+    display: flex;
+    gap: 10px;
 }
 
 .install-btn {
-    padding: 10px 20px;
+    flex: 1;
+    padding: 14px 20px;
     border: none;
-    border-radius: 10px;
-    background: var(--accent);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent) 0%, #ff6b9d 100%);
     color: white;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
 }
 
 .close-prompt {
-    background: transparent;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
+    border-radius: 12px;
     color: var(--text-secondary);
-    font-size: 1.2rem;
+    font-size: 0.95rem;
     cursor: pointer;
+}
+
+.ios-prompt .close-prompt {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, #ff6b9d 100%);
+    color: white;
+    font-weight: 600;
 }

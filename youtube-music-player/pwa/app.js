@@ -212,27 +212,90 @@ randomBtn.addEventListener('click', playRandom);
 
 // ==================== PWA Install Prompt ====================
 let deferredPrompt;
+let isInstalled = false;
+
+// Check if already installed
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    isInstalled = true;
+}
+
+// Detect mobile device
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Detect iOS
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
 
-    setTimeout(() => {
-        showInstallPrompt();
-    }, 3000);
+    // Show prompt immediately on mobile
+    if (isMobile() && !isInstalled) {
+        setTimeout(() => {
+            showInstallPrompt();
+        }, 1000);
+    }
+});
+
+// Show install prompt on page load for mobile
+window.addEventListener('load', () => {
+    if (isMobile() && !isInstalled) {
+        // For iOS (no beforeinstallprompt event)
+        if (isIOS()) {
+            setTimeout(() => {
+                showIOSInstallPrompt();
+            }, 2000);
+        }
+    }
 });
 
 function showInstallPrompt() {
-    if (!document.querySelector('.install-prompt')) {
+    if (!document.querySelector('.install-prompt') && !isInstalled) {
         const prompt = document.createElement('div');
         prompt.className = 'install-prompt show';
         prompt.innerHTML = `
-            <p>📱 Thêm vào màn hình chính?</p>
-            <button class="install-btn" onclick="installPWA()">Cài đặt</button>
-            <button class="close-prompt" onclick="this.parentElement.remove()">✕</button>
+            <div class="install-content">
+                <span class="install-icon">�</span>
+                <div class="install-text">
+                    <strong>Cài đặt ứng dụng</strong>
+                    <p>Thêm vào màn hình chính để trải nghiệm tốt hơn!</p>
+                </div>
+            </div>
+            <div class="install-actions">
+                <button class="install-btn" onclick="installPWA()">Cài đặt ngay</button>
+                <button class="close-prompt" onclick="dismissPrompt()">Để sau</button>
+            </div>
         `;
         document.body.appendChild(prompt);
     }
+}
+
+function showIOSInstallPrompt() {
+    if (!document.querySelector('.install-prompt') && !isInstalled && !sessionStorage.getItem('iosPromptShown')) {
+        const prompt = document.createElement('div');
+        prompt.className = 'install-prompt show ios-prompt';
+        prompt.innerHTML = `
+            <div class="install-content">
+                <span class="install-icon">📲</span>
+                <div class="install-text">
+                    <strong>Cài đặt ứng dụng</strong>
+                    <p>Nhấn <strong>Share</strong> □↑ → <strong>"Thêm vào MH chính"</strong></p>
+                </div>
+            </div>
+            <button class="close-prompt" onclick="dismissPrompt()">Đã hiểu</button>
+        `;
+        document.body.appendChild(prompt);
+        sessionStorage.setItem('iosPromptShown', 'true');
+    }
+}
+
+function dismissPrompt() {
+    document.querySelector('.install-prompt')?.remove();
+    sessionStorage.setItem('installPromptDismissed', 'true');
 }
 
 async function installPWA() {
@@ -240,6 +303,9 @@ async function installPWA() {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         console.log(`User response: ${outcome}`);
+        if (outcome === 'accepted') {
+            isInstalled = true;
+        }
         deferredPrompt = null;
         document.querySelector('.install-prompt')?.remove();
     }
@@ -261,3 +327,4 @@ document.body.addEventListener('touchmove', (e) => {
     }
     e.preventDefault();
 }, { passive: false });
+
