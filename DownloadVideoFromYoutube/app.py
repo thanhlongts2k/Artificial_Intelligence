@@ -179,6 +179,7 @@ def debug_info():
     
     return jsonify({
         'is_cloud': IS_CLOUD,
+        'yt_dlp_version': yt_dlp.version.__version__,
         'ffmpeg_path': FFMPEG_PATH,
         'ffmpeg_exists': os.path.exists(FFMPEG_PATH) if FFMPEG_PATH else False,
         'cookie_env_present': YOUTUBE_COOKIES is not None,
