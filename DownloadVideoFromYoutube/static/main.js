@@ -68,16 +68,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (proxy) apiUrl += `&proxy=${encodeURIComponent(proxy)}`;
 
             const response = await fetch(apiUrl);
+            
+            // Nếu server trả về lỗi 500 hoặc 4xx
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: `Server error (${response.status})` }));
+                showError("Lỗi hệ thống: " + (errorData.error || "Không xác định"));
+                return;
+            }
+
             const data = await response.json();
 
             if (data.error) {
-                showError("Lỗi: " + data.error);
+                showError("Lỗi từ YouTube: " + data.error);
                 return;
             }
 
             displayVideoInfo(data, url);
         } catch (error) {
-            showError('Đã xảy ra lỗi khi kết nối với máy chủ. Hãy đảm bảo app.py đang chạy.');
+            console.error("Fetch error:", error);
+            showError('Lỗi kết nối: Không thể liên lạc với Server. Hãy thử tải lại trang hoặc kiểm tra Log trên Render.');
         } finally {
             loading.style.display = 'none';
             analyzeBtn.disabled = false;
