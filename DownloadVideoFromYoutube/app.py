@@ -60,12 +60,17 @@ FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 # Use system temp directory to ensure write access on cloud environments
 COOKIE_FILE_PATH = os.path.join(tempfile.gettempdir(), 'ytdl_cookies.txt')
 YOUTUBE_COOKIES = os.environ.get('YOUTUBE_COOKIES')
+YOUTUBE_POT = os.environ.get('YOUTUBE_POT')  # Proof of Origin Token
 
 def init_cookies():
     if YOUTUBE_COOKIES:
         try:
             # Handle potential escaping of newlines in env var
             cookie_content = YOUTUBE_COOKIES.replace('\\n', '\n').strip()
+            # Double check for common paste issues
+            if "Netscape" not in cookie_content and "\t" not in cookie_content:
+                logging.warning("[!] YOUTUBE_COOKIES env var might be malformed (missing tabs)")
+            
             with open(COOKIE_FILE_PATH, 'w', encoding='utf-8') as f:
                 f.write(cookie_content)
             logging.info(f"[+] Cookie file initialized at {COOKIE_FILE_PATH} (Length: {len(cookie_content)})")
@@ -77,14 +82,26 @@ init_cookies()
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
-        # Real-world User Agent
-        opts['user_agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1'
-        # IOS client is currently the most resilient against bot detection
-        opts['extractor_args'] = {'youtube': {'player_client': ['ios'], 'skip': ['hls', 'dash']}}
-        # Extra bypass flags
+        # Using a standard modern Chrome UA often works best with cookies exported from desktop
+        opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+        
+        # 'web_embedded' or 'tv' are often less restricted for long-running server IPs
+        opts['extractor_args'] = {
+            'youtube': {
+                'player_client': ['web_embedded', 'tv'],
+                'player_skip': ['webpage', 'configs']
+            }
+        }
+        
+        if YOUTUBE_POT:
+            # PO Token support if provided
+            opts['extractor_args']['youtube']['po_token'] = [YOUTUBE_POT]
+            logging.info("[+] PO Token applied to yt-dlp options")
+
+        # Bypass tweaks
         opts['nocheckcertificate'] = True
-        opts['prefer_free_formats'] = True
         opts['youtube_include_dash_manifest'] = False
+        opts['quiet'] = False  # Keep logs visible for debugging
     return opts
 
 import socket
@@ -187,6 +204,7 @@ def debug_info():
         'cookie_file_exists': cookie_exists,
         'cookie_file_size': cookie_size,
         'cookie_has_tabs': has_tabs,
+        'po_token_present': YOUTUBE_POT is not None,
         'cookie_first_line': open(COOKIE_FILE_PATH, 'r').readline().strip() if cookie_exists else "N/A",
         'temp_dir': tempfile.gettempdir(),
         'python_version': sys.version
