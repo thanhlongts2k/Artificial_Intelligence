@@ -57,14 +57,22 @@ import imageio_ffmpeg
 FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 
 # YouTube Cookies setup (bot-protection bypass)
-COOKIE_FILE_PATH = os.path.join(application_path, 'cookies.txt')
+# Use system temp directory to ensure write access on cloud environments
+COOKIE_FILE_PATH = os.path.join(tempfile.gettempdir(), 'ytdl_cookies.txt')
 YOUTUBE_COOKIES = os.environ.get('YOUTUBE_COOKIES')
-if YOUTUBE_COOKIES:
-    try:
-        with open(COOKIE_FILE_PATH, 'w', encoding='utf-8') as f:
-            f.write(YOUTUBE_COOKIES.replace('\\n', '\n').strip())
-    except Exception:
-        pass
+
+def init_cookies():
+    if YOUTUBE_COOKIES:
+        try:
+            # Handle potential escaping of newlines in env var
+            cookie_content = YOUTUBE_COOKIES.replace('\\n', '\n').strip()
+            with open(COOKIE_FILE_PATH, 'w', encoding='utf-8') as f:
+                f.write(cookie_content)
+            logging.info(f"[+] Cookie file initialized at {COOKIE_FILE_PATH} (Length: {len(cookie_content)})")
+        except Exception as e:
+            logging.error(f"[!] Failed to write cookie file: {str(e)}")
+
+init_cookies()
 
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
@@ -149,7 +157,26 @@ def get_info():
                 'formats': formats
             })
     except Exception as e:
+        logging.error(f"[!] Info error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/debug')
+def debug_info():
+    """Diagnostic route to check cloud environment state"""
+    cookie_exists = os.path.exists(COOKIE_FILE_PATH)
+    cookie_size = os.path.getsize(COOKIE_FILE_PATH) if cookie_exists else 0
+    
+    return jsonify({
+        'is_cloud': IS_CLOUD,
+        'ffmpeg_path': FFMPEG_PATH,
+        'ffmpeg_exists': os.path.exists(FFMPEG_PATH) if FFMPEG_PATH else False,
+        'cookie_env_present': YOUTUBE_COOKIES is not None,
+        'cookie_file_path': COOKIE_FILE_PATH,
+        'cookie_file_exists': cookie_exists,
+        'cookie_file_size': cookie_size,
+        'temp_dir': tempfile.gettempdir(),
+        'python_version': sys.version
+    })
 
 @app.route('/api/download')
 def download_video():
