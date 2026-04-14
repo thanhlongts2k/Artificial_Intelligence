@@ -52,11 +52,9 @@ TEMP_DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'ytdl_tool')
 if not os.path.exists(TEMP_DOWNLOAD_DIR):
     os.makedirs(TEMP_DOWNLOAD_DIR)
 
-# Dynamic FFmpeg path detection
-FFMPEG_PATH = shutil.which('ffmpeg')
-if not FFMPEG_PATH:
-    # Fallback to local Windows path if not in system PATH
-    FFMPEG_PATH = r'C:\Users\Long\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1-full_build\bin\ffmpeg.exe'
+# Dynamic FFmpeg path detection using imageio-ffmpeg
+import imageio_ffmpeg
+FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 
 import socket
 
