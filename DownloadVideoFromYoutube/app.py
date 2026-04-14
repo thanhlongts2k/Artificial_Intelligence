@@ -44,8 +44,20 @@ else:
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
 
+import traceback
 app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 CORS(app)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Bắt mọi lỗi 500 và trả về chi tiết JSON"""
+    error_trace = traceback.format_exc()
+    logging.error(f"FATAL ERROR: {str(e)}\n{error_trace}")
+    return jsonify({
+        "error": "Server error",
+        "details": str(e),
+        "traceback": error_trace if not IS_CLOUD else "Check Render Logs"
+    }), 500
 
 # Temp directory for downloads
 TEMP_DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'ytdl_tool')
