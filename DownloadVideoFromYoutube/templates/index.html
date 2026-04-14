@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader - Tải Video Siêu Tốc</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>YT Downloader</h1>
+            <p>Dán link YouTube vào đây để trải nghiệm tốc độ tải cực đỉnh</p>
+        </header>
+
+        <main>
+            <div class="search-box">
+                <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+                <div class="search-buttons">
+                    <button id="pasteBtn" class="btn-secondary">
+                        <span class="btn-text">Dán</span>
+                    </button>
+                    <button id="analyzeBtn" class="btn-primary">
+                        <span class="btn-text">Phân tích</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Đang lấy thông tin video...</p>
+            </div>
+
+            <div id="errorMsg" class="error-msg"></div>
+
+            <div id="toast" class="toast">
+                <span id="toastMsg"></span>
+            </div>
+
+
+            <div id="resultContainer" class="result-card">
+                <div class="video-preview">
+                    <img id="thumbImg" src="" alt="Thumbnail" class="thumbnail">
+                    <div class="video-info">
+                        <div>
+                            <h2 id="videoTitle">Tiêu đề video</h2>
+                            <p id="videoUploader" class="uploader">Kênh YouTube</p>
+                        </div>
+                        
+                        <div class="format-selector">
+                            <h3>Chọn chất lượng tải về:</h3>
+                            <div id="formatList" class="format-list">
+                                <!-- Formats will be injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="qrCodeContainer" class="qr-container">
+                <p>Mã QR</p>
+                <div id="qrcode"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Pass host IP to JavaScript -->
+    <script>
+        window.HOST_IP = "{{ host_ip }}";
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
