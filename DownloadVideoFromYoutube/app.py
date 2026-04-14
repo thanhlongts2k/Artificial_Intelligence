@@ -1,8 +1,7 @@
 import os
 import sys
 import yt_dlp
-from flask import Flask, request, jsonify, render_template, send_file, Response
-from flask_cors import CORS
+import traceback
 import tempfile
 import time
 import subprocess
@@ -10,6 +9,10 @@ import threading
 import logging
 import webbrowser
 import shutil
+import socket
+import imageio_ffmpeg
+from flask import Flask, request, jsonify, render_template, send_file, Response, has_request_context
+from flask_cors import CORS
 
 # Detect Environment
 IS_CLOUD = os.environ.get('RENDER') is not None
@@ -79,61 +82,42 @@ YOUTUBE_PROXY = os.environ.get('YOUTUBE_PROXY') # Optional Proxy (e.g. http://us
 def init_cookies():
     if YOUTUBE_COOKIES:
         try:
-            # Handle potential escaping of newlines in env var
-            cookie_content = YOUTUBE_COOKIES.replace('\\n', '\n').strip()
-            # Double check for common paste issues
-            if "Netscape" not in cookie_content and "\t" not in cookie_content:
-                logging.warning("[!] YOUTUBE_COOKIES env var might be malformed (missing tabs)")
-            
+            content = YOUTUBE_COOKIES.replace('\\n', '\n').strip()
             with open(COOKIE_FILE_PATH, 'w', encoding='utf-8') as f:
-                f.write(cookie_content)
-            logging.info(f"[+] Cookie file initialized at {COOKIE_FILE_PATH} (Length: {len(cookie_content)})")
+                f.write(content)
+            logging.info(f"[+] Cookies initialized ({len(content)} bytes)")
         except Exception as e:
-            logging.error(f"[!] Failed to write cookie file: {str(e)}")
+            logging.error(f"[-] Cookie alert: {e}")
 
 init_cookies()
 
 def apply_cookies(opts):
-    # Always set a mobile-like User-Agent to match the android/ios clients better
     opts['user_agent'] = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36'
-    
-    # 'android' and 'ios' are currently the most reliable clients for data centers 
-    # because YouTube allows them more leeway than the 'web' client.
     opts['extractor_args'] = {
         'youtube': {
             'player_client': ['android', 'ios', 'web_embedded'],
             'player_skip': ['webpage', 'configs'],
-            # Some videos need an older client identification to bypass the sign-in check
             'use_stable_yt_id': True
         }
     }
 
-    # Apply Cookies if available
-    if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
+    if os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
-        
-        if YOUTUBE_POT:
-            opts['extractor_args']['youtube']['po_token'] = [YOUTUBE_POT]
-            logging.info("[+] PO Token applied")
-            
-        if YOUTUBE_VISITOR_DATA:
-            opts['extractor_args']['youtube']['visitor_data'] = [YOUTUBE_VISITOR_DATA]
-            logging.info("[+] Visitor Data applied")
+        if YOUTUBE_POT: opts['extractor_args']['youtube']['po_token'] = [YOUTUBE_POT]
+        if YOUTUBE_VISITOR_DATA: opts['extractor_args']['youtube']['visitor_data'] = [YOUTUBE_VISITOR_DATA]
 
-    # Proxy support (Always available, independent of cookies)
-    try:
-        request_proxy = request.args.get('proxy') if request else None
-        final_proxy = request_proxy or YOUTUBE_PROXY
-        if final_proxy:
-            opts['proxy'] = final_proxy
-            logging.info(f"[+] Using proxy: {final_proxy[:15]}...")
-    except Exception as e:
-        logging.warning(f"[-] Could not access request context for proxy: {e}")
+    # Proxy Logic
+    proxy = YOUTUBE_PROXY
+    if has_request_context():
+        p = request.args.get('proxy')
+        if p: proxy = p
 
-    # Bypass tweaks
+    if proxy:
+        opts['proxy'] = proxy
+        logging.info(f"[*] Proxy active: {proxy[:15]}...")
+
     opts['nocheckcertificate'] = True
     opts['youtube_include_dash_manifest'] = False
-    opts['quiet'] = False 
     return opts
 
 import socket
