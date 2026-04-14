@@ -83,24 +83,25 @@ init_cookies()
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
-        # Using a stable User-Agent that works well with TV/Embedded clients
-        opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+        # Use a mobile-like User-Agent to match the android/ios clients better
+        opts['user_agent'] = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36'
         
-        # 'tv' and 'web_embedded' are currently the most stable for data-center IPs
+        # 'android' and 'ios' are currently the most reliable clients for data centers 
+        # because YouTube allows them more leeway than the 'web' client.
         opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['tv', 'web_embedded'],
-                'player_skip': ['webpage', 'configs']
+                'player_client': ['android', 'ios', 'web_embedded'],
+                'player_skip': ['webpage', 'configs'],
+                # Some videos need an older client identification to bypass the sign-in check
+                'use_stable_yt_id': True
             }
         }
         
         if YOUTUBE_POT:
-            # PO Token support
             opts['extractor_args']['youtube']['po_token'] = [YOUTUBE_POT]
             logging.info("[+] PO Token applied")
             
         if YOUTUBE_VISITOR_DATA:
-            # Visitor Data support
             opts['extractor_args']['youtube']['visitor_data'] = [YOUTUBE_VISITOR_DATA]
             logging.info("[+] Visitor Data applied")
 
