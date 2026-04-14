@@ -79,6 +79,8 @@ def apply_cookies(opts):
         opts['cookiefile'] = COOKIE_FILE_PATH
         # Use a generic modern browser user agent to match the cookies
         opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        # Modern bypass tactic: Use specific player clients
+        opts['extractor_args'] = {'youtube': {'player_client': ['web', 'mweb', 'android']}}
     return opts
 
 import socket
@@ -168,6 +170,9 @@ def debug_info():
     cookie_exists = os.path.exists(COOKIE_FILE_PATH)
     cookie_size = os.path.getsize(COOKIE_FILE_PATH) if cookie_exists else 0
     
+    cookie_content = open(COOKIE_FILE_PATH, 'r').read() if cookie_exists else ""
+    has_tabs = "\t" in cookie_content
+    
     return jsonify({
         'is_cloud': IS_CLOUD,
         'ffmpeg_path': FFMPEG_PATH,
@@ -176,6 +181,7 @@ def debug_info():
         'cookie_file_path': COOKIE_FILE_PATH,
         'cookie_file_exists': cookie_exists,
         'cookie_file_size': cookie_size,
+        'cookie_has_tabs': has_tabs,
         'cookie_first_line': open(COOKIE_FILE_PATH, 'r').readline().strip() if cookie_exists else "N/A",
         'temp_dir': tempfile.gettempdir(),
         'python_version': sys.version
