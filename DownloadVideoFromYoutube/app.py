@@ -77,6 +77,8 @@ init_cookies()
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
+        # Use a generic modern browser user agent to match the cookies
+        opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     return opts
 
 import socket
@@ -174,6 +176,7 @@ def debug_info():
         'cookie_file_path': COOKIE_FILE_PATH,
         'cookie_file_exists': cookie_exists,
         'cookie_file_size': cookie_size,
+        'cookie_first_line': open(COOKIE_FILE_PATH, 'r').readline().strip() if cookie_exists else "N/A",
         'temp_dir': tempfile.gettempdir(),
         'python_version': sys.version
     })
