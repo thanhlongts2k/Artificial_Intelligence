@@ -71,6 +71,30 @@ if not os.path.exists(TEMP_DOWNLOAD_DIR):
 import imageio_ffmpeg
 FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 
+# OAuth State
+OAUTH_DATA = {"code": None, "url": None, "last_updated": 0}
+
+class YtdlpLogger:
+    def debug(self, msg):
+        if "google.com/device" in msg:
+            # Pattern: To sign in, visit https://www.google.com/device and enter code XXXX-XXXX
+            logging.info(f"[OAuth] Captured message: {msg}")
+            try:
+                parts = msg.split("enter code")
+                if len(parts) > 1:
+                    code = parts[1].strip()
+                    OAUTH_DATA["code"] = code
+                    OAUTH_DATA["url"] = "https://www.google.com/device"
+                    OAUTH_DATA["last_updated"] = time.time()
+                    logging.info(f"[OAuth] Code extracted: {code}")
+            except Exception as e:
+                logging.error(f"[OAuth] Parse error: {e}")
+
+    def info(self, msg):
+        self.debug(msg)
+    def warning(self, msg): pass
+    def error(self, msg): pass
+
 # YouTube Cookies setup (bot-protection bypass)
 # Use system temp directory to ensure write access on cloud environments
 COOKIE_FILE_PATH = os.path.join(tempfile.gettempdir(), 'ytdl_cookies.txt')
@@ -116,8 +140,16 @@ def apply_cookies(opts):
         opts['proxy'] = proxy
         logging.info(f"[*] Proxy active: {proxy[:15]}...")
 
+    # Bypass tweaks
     opts['nocheckcertificate'] = True
     opts['youtube_include_dash_manifest'] = False
+    
+    # Enable OAuth2
+    opts['username'] = 'oauth2'
+    opts['logger'] = YtdlpLogger()
+    # Cache path for tokens
+    opts['cache_dir'] = os.path.join(tempfile.gettempdir(), 'ytdl_cache')
+    
     return opts
 
 import socket
@@ -200,6 +232,14 @@ def get_info():
     except Exception as e:
         logging.error(f"[!] Info error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/oauth/status')
+def oauth_status():
+    """Kiểm tra xem có mã OAuth nào đang chờ xác thực không"""
+    # Chỉ trả về mã nếu nó mới được tạo trong vòng 5 phút
+    if time.time() - OAUTH_DATA["last_updated"] < 300:
+        return jsonify(OAUTH_DATA)
+    return jsonify({"code": None, "url": None})
 
 @app.route('/api/debug')
 def debug_info():
