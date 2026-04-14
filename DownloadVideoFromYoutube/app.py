@@ -83,13 +83,13 @@ init_cookies()
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
-        # MATCHING User Agent with the browser you likely used to export cookies
+        # Using a stable User-Agent that works well with TV/Embedded clients
         opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         
-        # 'android', 'web', 'mweb' are currently the most reliable clients
+        # 'tv' and 'web_embedded' are currently the most stable for data-center IPs
         opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['android', 'web', 'mweb'],
+                'player_client': ['tv', 'web_embedded'],
                 'player_skip': ['webpage', 'configs']
             }
         }
