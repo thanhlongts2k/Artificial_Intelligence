@@ -56,6 +56,21 @@ if not os.path.exists(TEMP_DOWNLOAD_DIR):
 import imageio_ffmpeg
 FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 
+# YouTube Cookies setup (bot-protection bypass)
+COOKIE_FILE_PATH = os.path.join(application_path, 'cookies.txt')
+YOUTUBE_COOKIES = os.environ.get('YOUTUBE_COOKIES')
+if YOUTUBE_COOKIES:
+    try:
+        with open(COOKIE_FILE_PATH, 'w', encoding='utf-8') as f:
+            f.write(YOUTUBE_COOKIES.replace('\\n', '\n').strip())
+    except Exception:
+        pass
+
+def apply_cookies(opts):
+    if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
+        opts['cookiefile'] = COOKIE_FILE_PATH
+    return opts
+
 import socket
 
 def get_lan_ip():
@@ -81,11 +96,11 @@ def get_info():
     if not url:
         return jsonify({'error': 'URL is required'}), 400
     
-    ydl_opts = {
+    ydl_opts = apply_cookies({
         'quiet': True,
         'no_warnings': True,
         'ffmpeg_location': FFMPEG_PATH,
-    }
+    })
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -152,7 +167,7 @@ def download_video():
     output_path = os.path.join(TEMP_DOWNLOAD_DIR, f'dl_{timestamp}_%(id)s.%(ext)s')
     
     # Use yt-dlp to download and merge with FFmpeg
-    ydl_opts = {
+    ydl_opts = apply_cookies({
         'format': f'{format_id}+bestaudio[ext=m4a]/best',
         'outtmpl': output_path,
         'merge_output_format': 'mp4',
@@ -163,7 +178,7 @@ def download_video():
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4',
         }],
-    }
+    })
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
