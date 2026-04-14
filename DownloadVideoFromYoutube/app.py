@@ -61,6 +61,7 @@ FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 COOKIE_FILE_PATH = os.path.join(tempfile.gettempdir(), 'ytdl_cookies.txt')
 YOUTUBE_COOKIES = os.environ.get('YOUTUBE_COOKIES')
 YOUTUBE_POT = os.environ.get('YOUTUBE_POT')  # Proof of Origin Token
+YOUTUBE_VISITOR_DATA = os.environ.get('YOUTUBE_VISITOR_DATA') # Visitor Data Token
 
 def init_cookies():
     if YOUTUBE_COOKIES:
@@ -82,26 +83,31 @@ init_cookies()
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
-        # Using a standard modern Chrome UA often works best with cookies exported from desktop
+        # MATCHING User Agent with the browser you likely used to export cookies
         opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         
-        # 'web_embedded' or 'tv' are often less restricted for long-running server IPs
+        # 'android', 'web', 'mweb' are currently the most reliable clients
         opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['web_embedded', 'tv'],
+                'player_client': ['android', 'web', 'mweb'],
                 'player_skip': ['webpage', 'configs']
             }
         }
         
         if YOUTUBE_POT:
-            # PO Token support if provided
+            # PO Token support
             opts['extractor_args']['youtube']['po_token'] = [YOUTUBE_POT]
-            logging.info("[+] PO Token applied to yt-dlp options")
+            logging.info("[+] PO Token applied")
+            
+        if YOUTUBE_VISITOR_DATA:
+            # Visitor Data support
+            opts['extractor_args']['youtube']['visitor_data'] = [YOUTUBE_VISITOR_DATA]
+            logging.info("[+] Visitor Data applied")
 
         # Bypass tweaks
         opts['nocheckcertificate'] = True
         opts['youtube_include_dash_manifest'] = False
-        opts['quiet'] = False  # Keep logs visible for debugging
+        opts['quiet'] = False 
     return opts
 
 import socket
@@ -205,6 +211,7 @@ def debug_info():
         'cookie_file_size': cookie_size,
         'cookie_has_tabs': has_tabs,
         'po_token_present': YOUTUBE_POT is not None,
+        'visitor_data_present': YOUTUBE_VISITOR_DATA is not None,
         'cookie_first_line': open(COOKIE_FILE_PATH, 'r').readline().strip() if cookie_exists else "N/A",
         'temp_dir': tempfile.gettempdir(),
         'python_version': sys.version
