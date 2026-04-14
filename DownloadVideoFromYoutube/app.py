@@ -62,6 +62,7 @@ COOKIE_FILE_PATH = os.path.join(tempfile.gettempdir(), 'ytdl_cookies.txt')
 YOUTUBE_COOKIES = os.environ.get('YOUTUBE_COOKIES')
 YOUTUBE_POT = os.environ.get('YOUTUBE_POT')  # Proof of Origin Token
 YOUTUBE_VISITOR_DATA = os.environ.get('YOUTUBE_VISITOR_DATA') # Visitor Data Token
+YOUTUBE_PROXY = os.environ.get('YOUTUBE_PROXY') # Optional Proxy (e.g. http://user:pass@host:port)
 
 def init_cookies():
     if YOUTUBE_COOKIES:
@@ -104,6 +105,13 @@ def apply_cookies(opts):
         if YOUTUBE_VISITOR_DATA:
             opts['extractor_args']['youtube']['visitor_data'] = [YOUTUBE_VISITOR_DATA]
             logging.info("[+] Visitor Data applied")
+
+        # Proxy support
+        request_proxy = request.args.get('proxy') if request else None
+        final_proxy = request_proxy or YOUTUBE_PROXY
+        if final_proxy:
+            opts['proxy'] = final_proxy
+            logging.info(f"[+] Using proxy: {final_proxy[:15]}...")
 
         # Bypass tweaks
         opts['nocheckcertificate'] = True
@@ -213,6 +221,7 @@ def debug_info():
         'cookie_has_tabs': has_tabs,
         'po_token_present': YOUTUBE_POT is not None,
         'visitor_data_present': YOUTUBE_VISITOR_DATA is not None,
+        'proxy_present': YOUTUBE_PROXY is not None,
         'cookie_first_line': open(COOKIE_FILE_PATH, 'r').readline().strip() if cookie_exists else "N/A",
         'temp_dir': tempfile.gettempdir(),
         'python_version': sys.version

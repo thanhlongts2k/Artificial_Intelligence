@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMsg = document.getElementById('errorMsg');
     const resultContainer = document.getElementById('resultContainer');
     const formatList = document.getElementById('formatList');
+    const toggleSettings = document.getElementById('toggleSettings');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const proxyUrlInput = document.getElementById('proxyUrl');
 
     // Khởi tạo Mã QR (Tự động lấy URL hiện tại của trang web)
     const currentUrl = window.location.origin;
@@ -16,6 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
+    });
+
+    // Xử lý ẩn/hiện Cài đặt nâng cao
+    toggleSettings.addEventListener('click', () => {
+        settingsPanel.classList.toggle('active');
+        toggleSettings.classList.toggle('active');
     });
 
     // Xử lý nút Dán
@@ -40,7 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeBtn.disabled = true;
 
         try {
-            const response = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
+            const proxy = proxyUrlInput.value.trim();
+            let apiUrl = `/api/info?url=${encodeURIComponent(url)}`;
+            if (proxy) apiUrl += `&proxy=${encodeURIComponent(proxy)}`;
+
+            const response = await fetch(apiUrl);
             const data = await response.json();
 
             if (data.error) {
@@ -119,8 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             btn.classList.add('btn-loading');
         }
-
-        const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&format_id=${formatId}&title=${title || 'video'}&ext=${ext || 'mp4'}`;
+        
+        const proxy = proxyUrlInput.value.trim();
+        let downloadUrl = `/api/download?url=${encodeURIComponent(url)}&format_id=${formatId}&title=${title || 'video'}&ext=${ext || 'mp4'}`;
+        if (proxy) downloadUrl += `&proxy=${encodeURIComponent(proxy)}`;
 
         const a = document.createElement('a');
         a.href = downloadUrl;

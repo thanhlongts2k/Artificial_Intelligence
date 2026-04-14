@@ -30,6 +30,19 @@
                 </div>
             </div>
 
+            <div class="advanced-settings">
+                <button id="toggleSettings" class="settings-toggle">
+                    ⚙️ Cấu hình nâng cao (Proxy)
+                </button>
+                <div id="settingsPanel" class="settings-panel">
+                    <div class="input-group">
+                        <label for="proxyUrl">HTTP Proxy (Tùy chọn):</label>
+                        <input type="text" id="proxyUrl" placeholder="http://user:pass@host:port" autocomplete="off">
+                        <small>Để trống nếu không dùng. Dùng để vượt rào YouTube.</small>
+                    </div>
+                </div>
+            </div>
+
             <div id="loading" class="loading">
                 <div class="spinner"></div>
                 <p>Đang lấy thông tin video...</p>
