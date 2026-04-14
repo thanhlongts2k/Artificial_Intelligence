@@ -9,24 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleSettings = document.getElementById('toggleSettings');
     const settingsPanel = document.getElementById('settingsPanel');
     const proxyUrlInput = document.getElementById('proxyUrl');
-    const oauthModal = document.getElementById('oauthModal');
-    const oauthCode = document.getElementById('oauthCode');
-    
-    // Polling OAuth status mỗi 2 giây
-    setInterval(checkOAuthStatus, 2000);
-
-    async function checkOAuthStatus() {
-        try {
-            const response = await fetch('/api/oauth/status');
-            const data = await response.json();
-            if (data.code) {
-                oauthCode.textContent = data.code;
-                oauthModal.style.display = 'block';
-            } else {
-                oauthModal.style.display = 'none';
-            }
-        } catch (e) {}
-    }
 
     // Khởi tạo Mã QR (Tự động lấy URL hiện tại của trang web)
     const currentUrl = window.location.origin;
