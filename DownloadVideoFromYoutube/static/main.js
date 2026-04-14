@@ -27,6 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSettings.classList.toggle('active');
     });
 
+    // Load proxy từ localStorage nếu có
+    const savedProxy = localStorage.getItem('yt_downloader_proxy');
+    if (savedProxy) {
+        proxyUrlInput.value = savedProxy;
+        // Tự động mở panel nếu đã có proxy lưu sẵn
+        settingsPanel.classList.add('active');
+        toggleSettings.classList.add('active');
+    }
+
+    // Lưu proxy vào localStorage khi người dùng nhập
+    proxyUrlInput.addEventListener('input', () => {
+        localStorage.setItem('yt_downloader_proxy', proxyUrlInput.value.trim());
+    });
+
     // Xử lý nút Dán
     pasteBtn.addEventListener('click', async () => {
         try {
