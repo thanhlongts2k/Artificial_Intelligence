@@ -77,10 +77,14 @@ init_cookies()
 def apply_cookies(opts):
     if YOUTUBE_COOKIES and os.path.exists(COOKIE_FILE_PATH):
         opts['cookiefile'] = COOKIE_FILE_PATH
-        # Use a generic modern browser user agent to match the cookies
-        opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-        # Modern bypass tactic: Use specific player clients
-        opts['extractor_args'] = {'youtube': {'player_client': ['web', 'mweb', 'android']}}
+        # Real-world User Agent
+        opts['user_agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1'
+        # IOS client is currently the most resilient against bot detection
+        opts['extractor_args'] = {'youtube': {'player_client': ['ios'], 'skip': ['hls', 'dash']}}
+        # Extra bypass flags
+        opts['nocheckcertificate'] = True
+        opts['prefer_free_formats'] = True
+        opts['youtube_include_dash_manifest'] = False
     return opts
 
 import socket
@@ -109,8 +113,8 @@ def get_info():
         return jsonify({'error': 'URL is required'}), 400
     
     ydl_opts = apply_cookies({
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
         'ffmpeg_location': FFMPEG_PATH,
     })
     
@@ -207,8 +211,8 @@ def download_video():
         'format': f'{format_id}+bestaudio[ext=m4a]/best',
         'outtmpl': output_path,
         'merge_output_format': 'mp4',
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
         'ffmpeg_location': FFMPEG_PATH,
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
