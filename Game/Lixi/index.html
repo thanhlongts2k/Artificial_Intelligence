@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" href="./asset/favicon.ico">
     <style>
         :root {
             --red-primary: #c8102e;
@@ -34,7 +35,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: 
+            background:
                 radial-gradient(circle at top, rgba(255, 215, 0, 0.45), transparent 45%),
                 radial-gradient(circle at bottom, rgba(122, 0, 16, 0.9), transparent 50%),
                 linear-gradient(135deg, #4a0007, #7a0010, #b3001b);
@@ -44,7 +45,8 @@
         }
 
         /* Ambient Lucky Decorative Background Elements */
-        body::before, body::after {
+        body::before,
+        body::after {
             content: '🧧';
             position: fixed;
             font-size: 3rem;
@@ -53,12 +55,29 @@
             pointer-events: none;
             animation: floatSlow 8s ease-in-out infinite;
         }
-        body::before { top: 10%; left: 8%; animation-delay: 0s; }
-        body::after { bottom: 12%; right: 8%; animation-delay: 4s; }
+
+        body::before {
+            top: 10%;
+            left: 8%;
+            animation-delay: 0s;
+        }
+
+        body::after {
+            bottom: 12%;
+            right: 8%;
+            animation-delay: 4s;
+        }
 
         @keyframes floatSlow {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(15deg); }
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(15deg);
+            }
         }
 
         .app {
@@ -72,7 +91,7 @@
             border: var(--border-gold);
             border-radius: 32px;
             padding: 30px 24px;
-            box-shadow: 
+            box-shadow:
                 0 0 25px rgba(255, 215, 0, 0.25),
                 0 20px 45px rgba(0, 0, 0, 0.45);
             text-align: center;
@@ -91,23 +110,27 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: linear-gradient(
-                45deg,
-                transparent 45%,
-                rgba(255, 215, 0, 0.1) 50%,
-                transparent 55%
-            );
+            background: linear-gradient(45deg,
+                    transparent 45%,
+                    rgba(255, 215, 0, 0.1) 50%,
+                    transparent 55%);
             transform: rotate(45deg);
             animation: shine 4.5s infinite linear;
             pointer-events: none;
         }
 
         @keyframes shine {
-            0% { transform: translate(-30%, -30%) rotate(45deg); }
-            100% { transform: translate(30%, 30%) rotate(45deg); }
+            0% {
+                transform: translate(-30%, -30%) rotate(45deg);
+            }
+
+            100% {
+                transform: translate(30%, 30%) rotate(45deg);
+            }
         }
 
-        h1, h2 {
+        h1,
+        h2 {
             color: var(--gold-primary);
             font-size: clamp(1rem, 4.6vw, 2.2rem);
             font-weight: 900;
@@ -157,7 +180,7 @@
             font-size: 32px;
             font-weight: 900;
             border: 3px solid var(--gold-primary);
-            box-shadow: 
+            box-shadow:
                 inset 0 2px 6px rgba(0, 0, 0, 0.25),
                 0 0 15px rgba(255, 215, 0, 0.4);
             letter-spacing: 0.5px;
@@ -280,7 +303,7 @@
             color: var(--red-dark);
             font-size: 20px;
             border: 3px solid var(--gold-light);
-            box-shadow: 
+            box-shadow:
                 0 6px 16px rgba(0, 0, 0, 0.3),
                 0 0 15px rgba(255, 215, 0, 0.3);
             text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4);
@@ -289,7 +312,7 @@
         .done-btn:hover:not(:disabled),
         .spin-btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 
+            box-shadow:
                 0 8px 20px rgba(0, 0, 0, 0.4),
                 0 0 25px rgba(255, 215, 0, 0.6);
             background: linear-gradient(180deg, #fff2a3, #ffbd1a);
@@ -369,7 +392,7 @@
             height: 28px;
             border-radius: 50%;
             background: radial-gradient(circle, var(--gold-light), var(--gold-dark));
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         #wheelCanvas {
@@ -404,7 +427,7 @@
             width: min(90vw, 400px);
             padding: 35px 25px;
             text-align: center;
-            box-shadow: 
+            box-shadow:
                 0 0 35px rgba(255, 215, 0, 0.4),
                 0 15px 30px rgba(0, 0, 0, 0.6);
             transform: scale(0.7);
@@ -413,12 +436,19 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes popIn {
-            to { transform: scale(1); }
+            to {
+                transform: scale(1);
+            }
         }
 
         .lixi-envelope {
@@ -427,14 +457,19 @@
 
         .envelope-icon {
             font-size: 5.5rem;
-            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3));
             animation: wobble 1.5s ease-in-out infinite alternate;
             display: inline-block;
         }
 
         @keyframes wobble {
-            0% { transform: translateY(0) rotate(-6deg); }
-            100% { transform: translateY(-8px) rotate(6deg); }
+            0% {
+                transform: translateY(0) rotate(-6deg);
+            }
+
+            100% {
+                transform: translateY(-8px) rotate(6deg);
+            }
         }
 
         .lixi-envelope h3 {
@@ -442,7 +477,7 @@
             font-size: 24px;
             font-weight: 900;
             margin: 15px 0 5px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
         }
 
         .lixi-envelope p {
@@ -456,15 +491,24 @@
             font-weight: 900;
             color: var(--gold-primary);
             margin: 15px 0;
-            text-shadow: 
+            text-shadow:
                 0 0 10px rgba(255, 215, 0, 0.5),
                 0 4px 10px rgba(0, 0, 0, 0.4);
             animation: pulseGlow 1.2s infinite;
         }
 
         @keyframes pulseGlow {
-            0%, 100% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.06); filter: brightness(1.2); }
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.06);
+                filter: brightness(1.2);
+            }
         }
 
         .claim-btn {
@@ -474,12 +518,12 @@
             color: var(--red-dark);
             font-size: 20px;
             border: 2px solid var(--gold-light);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
         .claim-btn:hover {
             transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(255,215,0,0.5);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
             background: linear-gradient(180deg, #fff2a3, #ffbd1a);
         }
 
@@ -540,7 +584,8 @@
             <div id="moneyGrid" class="money-grid"></div>
 
             <button id="doneBtn" class="done-btn" disabled>Hoàn tất</button>
-            <p class="hint">Click nút [+] hoặc [-] để cấu hình số tờ lì xì. Vòng quay sẽ chỉ quay trúng các mệnh giá bạn đã chọn.</p>
+            <p class="hint">Click nút [+] hoặc [-] để cấu hình số tờ lì xì. Vòng quay sẽ chỉ quay trúng các mệnh giá bạn
+                đã chọn.</p>
         </div>
 
         <!-- 🎉 SECTION 2: WHEEL SCREEN -->
@@ -584,7 +629,8 @@
                 <h3 style="color: #ff4d4d;">Hết Tiền Lì Xì Rồi!</h3>
                 <p style="margin: 10px 0; color: #ff9999;">Bạn đã hết tiền!<br>Vui lòng nạp thêm tiền 😂</p>
             </div>
-            <button id="backToWheelBtn" class="claim-btn" style="background: linear-gradient(180deg, #ff6b6b, #c8102e); color: white; border-color: #ff9999;">
+            <button id="backToWheelBtn" class="claim-btn"
+                style="background: linear-gradient(180deg, #ff6b6b, #c8102e); color: white; border-color: #ff9999;">
                 Trở Lại
             </button>
         </div>
@@ -617,12 +663,12 @@
         const moneyGrid = document.getElementById('moneyGrid');
         const clearBtn = document.getElementById('clearBtn');
         const doneBtn = document.getElementById('doneBtn');
-        
+
         const canvas = document.getElementById('wheelCanvas');
         const spinBtn = document.getElementById('spinBtn');
         const remainingMoneyText = document.getElementById('remainingMoneyText');
         const backToSettingsBtn = document.getElementById('backToSettingsBtn');
-        
+
         const celebrationModal = document.getElementById('celebrationModal');
         const modalPrizeAmount = document.getElementById('modalPrizeAmount');
         const claimBtn = document.getElementById('claimBtn');
@@ -651,19 +697,19 @@
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
-                
+
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                
+
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(600, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.08);
-                
+
                 gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
-                
+
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.08);
             } catch (e) {
@@ -687,14 +733,14 @@
                     const gain = audioCtx.createGain();
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
-                    
+
                     osc.type = 'triangle';
                     osc.frequency.value = freq;
-                    
+
                     const time = audioCtx.currentTime + index * 0.12;
                     gain.gain.setValueAtTime(0.12, time);
                     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-                    
+
                     osc.start(time);
                     osc.stop(time + 0.35);
                 });
@@ -716,7 +762,7 @@
         function updateTotalDisplay() {
             const total = calculateTotal();
             totalMoney.textContent = total ? `${formatMoney(total)} đ` : '0đ';
-            
+
             // Check if at least 1 bill has been selected
             let hasSelection = false;
             for (const qty of Object.values(selectedQuantities)) {
@@ -740,10 +786,10 @@
 
             denominations.forEach(item => {
                 const qty = selectedQuantities[item.value] || 0;
-                
+
                 const card = document.createElement('div');
                 card.className = `money-card ${qty > 0 ? 'active' : ''}`;
-                
+
                 // Allow clicking the card itself to increase quantity
                 card.addEventListener('click', (e) => {
                     // Prevent trigger if clicking adjust buttons directly
@@ -778,7 +824,7 @@
 
                 card.appendChild(label);
                 card.appendChild(controls);
-                
+
                 moneyGrid.appendChild(card);
             });
         }
@@ -788,7 +834,7 @@
             const currentQty = selectedQuantities[value] || 0;
             const newQty = Math.max(0, currentQty + delta);
             selectedQuantities[value] = newQty;
-            
+
             updateTotalDisplay();
             renderMoneyGrid();
         }
@@ -858,12 +904,12 @@
                 ctx.save();
                 ctx.translate(cx, cy);
                 ctx.rotate(start + sliceAngle / 2);
-                
+
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = '#ffd700'; // Yellow/Gold text
                 ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
-                
+
                 // Shadow for text legibility
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
                 ctx.shadowBlur = 4;
@@ -902,7 +948,7 @@
             // 6. Draw LED Blinkers around gold border
             const ledCount = 18;
             const blinkState = Math.floor(Date.now() / 250) % 2; // LED toggle interval
-            
+
             for (let i = 0; i < ledCount; i++) {
                 const ledAngle = i * ((Math.PI * 2) / ledCount);
                 const lx = cx + (radius + 4) * Math.cos(ledAngle);
@@ -910,11 +956,11 @@
 
                 ctx.beginPath();
                 ctx.arc(lx, ly, 5, 0, Math.PI * 2);
-                
+
                 // Alternate blink state
                 const active = (i % 2 === blinkState);
                 ctx.fillStyle = active ? '#ffffff' : '#ffd700';
-                
+
                 if (active) {
                     ctx.save();
                     ctx.shadowColor = '#ffffff';
@@ -985,7 +1031,7 @@
             // Sector landing formula
             const currentNorm = startAngle % (Math.PI * 2);
             let targetDiff = (3 * Math.PI / 2) - (targetedSliceIndex * sliceAngle + sliceAngle / 2);
-            
+
             // Format to positive values
             targetDiff = (targetDiff + Math.PI * 4) % (Math.PI * 2);
 
@@ -999,14 +1045,14 @@
 
             function animateSpin(now) {
                 const elapsed = now - startTime;
-                
+
                 if (elapsed >= duration) {
                     startAngle = destinationAngle;
                     drawWheel(startAngle);
-                    
+
                     isSpinning = false;
                     spinBtn.disabled = false;
-                    
+
                     // Show celebration modal
                     triggerCelebration(prizeValue);
                     return;
@@ -1041,7 +1087,7 @@
         // Golden & Red Confetti Drops
         function createConfettiEffect() {
             const colors = ['#ffd700', '#ff3b30', '#ffffff', '#ffcc00'];
-            
+
             for (let i = 0; i < 90; i++) {
                 const piece = document.createElement('div');
                 piece.className = 'confetti';
@@ -1052,7 +1098,7 @@
                 piece.style.animationDelay = `${Math.random() * 0.4}s`;
                 piece.style.animationDuration = `${Math.random() * 1.5 + 1.5}s`;
                 piece.style.transform = `rotate(${Math.random() * 360}deg)`;
-                
+
                 document.body.appendChild(piece);
                 setTimeout(() => piece.remove(), 2800);
             }
@@ -1071,7 +1117,7 @@
         doneBtn.addEventListener('click', () => {
             makeWheelItems();
             drawWheel(0);
-            
+
             settingSection.style.display = 'none';
             wheelSection.style.display = 'block';
             updateRemainingDisplay();
