@@ -582,9 +582,11 @@
             <div class="lixi-envelope">
                 <span class="envelope-icon" style="animation: none;">💸</span>
                 <h3 style="color: #ff4d4d;">Hết Tiền Lì Xì Rồi!</h3>
-                <p style="margin: 10px 0; color: #ff9999;">Bạn đã hết tiền! Vui lòng nạp thêm tiền 😂</p>
+                <p style="margin: 10px 0; color: #ff9999;">Bạn đã hết tiền!<br>Vui lòng nạp thêm tiền 😂</p>
             </div>
-            <button id="goToSettingsBtn" class="claim-btn" style="background: linear-gradient(180deg, #ff6b6b, #c8102e); color: white; border-color: #ff9999;">Nạp Thêm Tiền 🧧</button>
+            <button id="backToWheelBtn" class="claim-btn" style="background: linear-gradient(180deg, #ff6b6b, #c8102e); color: white; border-color: #ff9999;">
+                Trở Lại
+            </button>
         </div>
     </div>
 
@@ -626,7 +628,7 @@
         const claimBtn = document.getElementById('claimBtn');
 
         const outOfMoneyModal = document.getElementById('outOfMoneyModal');
-        const goToSettingsBtn = document.getElementById('goToSettingsBtn');
+        const backToWheelBtn = document.getElementById('backToWheelBtn');
 
         // State variables
         let wheelItems = []; // List of all denominations x 2
@@ -1093,14 +1095,9 @@
             renderMoneyGrid();
         });
 
-        // Go to settings button on out-of-money modal
-        goToSettingsBtn.addEventListener('click', () => {
+        // Nút Trở Lại trên modal hết tiền: Chỉ đóng modal và ở lại màn hình vòng quay
+        backToWheelBtn.addEventListener('click', () => {
             outOfMoneyModal.classList.remove('show');
-            wheelSection.style.display = 'none';
-            settingSection.style.display = 'block';
-            startAngle = 0;
-            updateTotalDisplay();
-            renderMoneyGrid();
         });
 
         // Initialize App
