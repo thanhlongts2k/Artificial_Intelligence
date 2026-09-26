@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C# / .NET compile artifacts
+bin/
+obj/
+*.dll
+
+# Cấu hình môi trường & bí mật
+.env
+.env.local
+.env.*.local
+
+# Nhật ký & Log Files
+*.log
+email_send.log
+email_timing.log
+email_system.log
+
+# Cơ sở dữ liệu tạm / Django artifacts
+*.sqlite3
+*.db
+db.sqlite3
+media/
+staticfiles/
+
+# Cấu hình IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS File artifacts
+.DS_Store
+Thumbs.db

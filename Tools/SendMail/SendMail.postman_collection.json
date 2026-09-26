@@ -1,0 +1,133 @@
+{
+	"info": {
+		"_postman_id": "sendmail-api-collection-2026",
+		"name": "SendMail API Collection",
+		"description": "Bộ Request Postman mẫu để test nhanh API Login & SendMail",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Login lấy Knox Token",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/login/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"login",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Send Mail (Dùng X-API-KEY - Chuỗi Email cách bởi dấu phẩy)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "sendmail-secret-api-key-2026",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to_emails\": \"user1@example.com, user2@example.com\",\n  \"subject\": \"Test Postman SendMail API\",\n  \"message\": \"Xin chào! Đây là email thử nghiệm gửi trực tiếp từ Postman.\",\n  \"from_name\": \"Postman Tester\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/send-email/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"send-email",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Send Mail (Dùng X-API-KEY - Form Data đính kèm File)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "sendmail-secret-api-key-2026",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "to_emails",
+							"value": "user1@example.com, user2@example.com",
+							"type": "text"
+						},
+						{
+							"key": "subject",
+							"value": "Báo cáo có file đính kèm",
+							"type": "text"
+						},
+						{
+							"key": "message",
+							"value": "Kính gửi Anh/Chị, xin gửi kèm tài liệu đính kèm bên dưới.",
+							"type": "text"
+						},
+						{
+							"key": "from_name",
+							"value": "Hệ thống Báo cáo",
+							"type": "text"
+						},
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/send-email/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"send-email",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

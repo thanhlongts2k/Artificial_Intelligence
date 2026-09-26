@@ -1,0 +1,9 @@
+# ============================================================
+#  AutoTyper / Bot Messenger v2.0 — Dependencies
+# ============================================================
+
+# Core — Thư viện bắt phím & tự động gõ
+keyboard>=0.13.5
+
+# Build — Đóng gói thành file .exe (chỉ cần khi build)
+pyinstaller>=6.0

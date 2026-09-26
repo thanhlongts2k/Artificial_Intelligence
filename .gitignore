@@ -1,17 +1,42 @@
-# Ignore folders
-flappy-bird/
+# Byte-compiled / Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
 
-# Build outputs
+# Cấu hình môi trường chứa thông tin nhạy cảm
+.env
+.env.*
+!.env.example
+
+# Log files
+*.log
+email_send.log
+email_timing.log
+email_system.log
+
+# Build & Dist outputs
 **/dist/
 **/build/
 **/*.spec
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-.venv/
+# Cơ sở dữ liệu SQLite / Database artifacts
+*.sqlite3
+*.sqlite
+*.db
+db.sqlite3
 
-# IDE
+# Ignore folders / temp projects
+flappy-bird/
+
+# Cấu hình IDE / Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db
