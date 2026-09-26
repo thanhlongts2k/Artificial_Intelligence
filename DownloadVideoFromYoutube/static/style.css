@@ -505,5 +505,102 @@ header p {
     text-align: center;
 }
 
-    text-align: center;
+/* Enhanced Format Meta & Badges */
+.format-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.format-details-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.format-icon {
+    font-size: 1.1rem;
+}
+
+.size-pill {
+    background: rgba(62, 166, 255, 0.15);
+    color: #3ea6ff;
+    border: 1px solid rgba(62, 166, 255, 0.35);
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.ext-pill {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    padding: 0.2rem 0.45rem;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.note-pill {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+.badge-quality {
+    background: linear-gradient(135deg, #ff0000, #ff5722);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3);
+}
+
+.badge-fps {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.35);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+}
+
+.format-item-audio {
+    border-color: rgba(62, 166, 255, 0.3);
+    background: rgba(62, 166, 255, 0.05);
+}
+
+.format-item-audio:hover {
+    background: rgba(62, 166, 255, 0.1);
+    border-color: rgba(62, 166, 255, 0.6);
+}
+
+.btn-audio {
+    background: linear-gradient(135deg, #0088cc, #00b4d8) !important;
+}
+
+.btn-audio:hover {
+    background: linear-gradient(135deg, #0077b6, #0096c7) !important;
+}
+
+.btn-m4a {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+}
+
+.btn-m4a:hover {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: #ffffff !important;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
 }

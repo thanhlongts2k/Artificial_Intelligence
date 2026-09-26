@@ -95,7 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayVideoInfo(data, originalUrl) {
         document.getElementById('videoTitle').textContent = data.title;
-        document.getElementById('videoUploader').textContent = data.uploader;
+        
+        let metaParts = [];
+        if (data.uploader) metaParts.push(data.uploader);
+        if (data.duration_formatted) metaParts.push(`⏱️ ${data.duration_formatted}`);
+        if (data.view_count) metaParts.push(`👁️ ${Number(data.view_count).toLocaleString()} lượt xem`);
+        document.getElementById('videoUploader').textContent = metaParts.join(' • ');
+        
         document.getElementById('thumbImg').src = data.thumbnail;
 
         formatList.innerHTML = '';
@@ -103,23 +109,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const validFormats = data.formats || [];
 
         if (validFormats.length === 0) {
-            formatList.innerHTML = '<p style="color: #ff9800; padding: 10px; background: rgba(255,152,0,0.1); border-radius: 8px;">Không tìm thấy định dạng tải trực tiếp (MP4 combo v+a). Bạn có thể cần cài FFmpeg để tải các định dạng chất lượng cao hơn.</p>';
+            formatList.innerHTML = '<p style="color: #ff9800; padding: 10px; background: rgba(255,152,0,0.1); border-radius: 8px;">Không tìm thấy định dạng tải phù hợp.</p>';
         }
 
         validFormats.forEach(f => {
             const item = document.createElement('div');
-            item.className = 'format-item';
+            const isAudio = f.type === 'audio';
+            item.className = isAudio ? 'format-item format-item-audio' : 'format-item';
 
-            const sizeMb = f.filesize ? (f.filesize / (1024 * 1024)).toFixed(1) + ' MB' : 'N/A';
-            const res = f.resolution || 'Unknown';
+            let sizeDisplay = f.filesize_formatted;
+            if (!sizeDisplay || sizeDisplay === 'N/A') {
+                if (f.filesize && f.filesize > 0) {
+                    sizeDisplay = (f.filesize / (1024 * 1024)).toFixed(1) + ' MB';
+                } else {
+                    sizeDisplay = 'Tối ưu stream';
+                }
+            }
+            const approxPrefix = (f.is_approx && sizeDisplay !== 'Tối ưu stream') ? '~' : '';
             const safeTitle = encodeURIComponent(data.title || 'video');
+            const icon = isAudio ? '🎵' : '🎬';
+            const qualityBadge = f.quality_badge ? `<span class="badge-quality">${f.quality_badge}</span>` : '';
+            const fpsBadge = (f.fps && f.fps > 30) ? `<span class="badge-fps">${f.fps}fps</span>` : '';
+            const sizeBadge = `<span class="size-pill">📦 ${approxPrefix}${sizeDisplay}</span>`;
+
             item.innerHTML = `
                 <div class="format-meta">
-                    <span class="res-tag">${res}</span>
-                    <span class="ext-tag">${f.ext.toUpperCase()} • ${sizeMb} • ${f.note || 'Video'}</span>
+                    <div class="format-title-row">
+                        <span class="format-icon">${icon}</span>
+                        <span class="res-tag">${f.res_label || f.resolution}</span>
+                        ${qualityBadge}
+                        ${fpsBadge}
+                    </div>
+                    <div class="format-details-row">
+                        ${sizeBadge}
+                        <span class="ext-pill">${f.ext.toUpperCase()}</span>
+                        <span class="note-pill">${isAudio ? 'Tách riêng file nhạc' : 'Hình ảnh & Âm thanh'}</span>
+                    </div>
                 </div>
-                <button class="btn-primary" onclick="downloadVideo(event, '${originalUrl}', '${f.format_id}', '${safeTitle}', '${f.ext}')">
-                    Tải về
+                <button class="btn-primary ${isAudio ? (f.ext === 'm4a' ? 'btn-m4a' : 'btn-audio') : ''}" onclick="downloadVideo(event, '${originalUrl}', '${f.format_id}', '${safeTitle}', '${f.ext}', '${f.type}')">
+                    ${isAudio ? (f.ext === 'm4a' ? '⚡ Tải M4A' : '🎵 Tải MP3') : 'Tải về'}
                 </button>
             `;
             formatList.appendChild(item);
@@ -135,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const toastMsg = document.getElementById('toastMsg');
         if (!toast || !toastMsg) {
             console.error('Toast elements not found');
-            alert(msg); // Fallback to alert if toast fails
+            alert(msg);
             return;
         }
         toastMsg.textContent = msg;
@@ -145,19 +173,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }, duration);
     }
 
-    window.downloadVideo = (event, url, formatId, title, ext) => {
+    window.downloadVideo = (event, url, formatId, title, ext, type) => {
         const btn = event ? (event.currentTarget || event.target) : null;
         let originalHTML = '';
+        const token = 'dl_' + Date.now();
+        let seconds = 0;
 
         if (btn) {
             originalHTML = btn.innerHTML;
-            btn.innerHTML = '<span class="btn-spinner"></span> Đang tải...';
+            btn.innerHTML = '<span class="btn-spinner"></span> Đang xử lý...';
             btn.disabled = true;
             btn.classList.add('btn-loading');
         }
         
         const proxy = proxyUrlInput.value.trim();
-        let downloadUrl = `/api/download?url=${encodeURIComponent(url)}&format_id=${formatId}&title=${title || 'video'}&ext=${ext || 'mp4'}`;
+        let downloadUrl = `/api/download?url=${encodeURIComponent(url)}&format_id=${formatId}&title=${title || 'video'}&ext=${ext || 'mp4'}&type=${type || 'video'}&token=${token}`;
         if (proxy) downloadUrl += `&proxy=${encodeURIComponent(proxy)}`;
 
         const a = document.createElement('a');
@@ -166,15 +196,68 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(a);
         a.click();
 
-        // Re-enable after some time (server needs time to process)
-        setTimeout(() => {
-            if (a.parentNode) document.body.removeChild(a);
-            if (btn) {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-                btn.classList.remove('btn-loading');
+        // Đếm giây & Lắng nghe Cookie Token khi server hoàn tất nén/gửi file
+        const checkInterval = setInterval(() => {
+            seconds++;
+            if (btn && btn.classList.contains('btn-loading')) {
+                if (seconds >= 2) {
+                    btn.innerHTML = `<span class="btn-spinner"></span> Đang tạo file (${seconds}s)...`;
+                }
             }
-        }, 30000);
+
+            // Kiểm tra Cookie từ response của server
+            const cookieList = document.cookie.split(';');
+            let isSuccess = false;
+            let isError = false;
+
+            for (let c of cookieList) {
+                const item = c.trim();
+                if (item.startsWith(`download_token=${token}`)) {
+                    isSuccess = true;
+                    document.cookie = `download_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                    break;
+                } else if (item.startsWith(`download_token=error_${token}`)) {
+                    isError = true;
+                    document.cookie = `download_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                    break;
+                }
+            }
+
+            if (isSuccess) {
+                clearInterval(checkInterval);
+                if (a.parentNode) document.body.removeChild(a);
+                if (btn) {
+                    btn.innerHTML = '✅ Đã tải xong!';
+                    btn.classList.remove('btn-loading');
+                    btn.classList.add('btn-success');
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        btn.classList.remove('btn-success');
+                    }, 4000);
+                }
+            } else if (isError) {
+                clearInterval(checkInterval);
+                if (a.parentNode) document.body.removeChild(a);
+                if (btn) {
+                    btn.innerHTML = '❌ Lỗi tải!';
+                    btn.classList.remove('btn-loading');
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                    }, 4000);
+                }
+                showError("Không thể hoàn tất tải file từ YouTube. Vui lòng thử lại!");
+            } else if (seconds >= 600) { // Timeout an toàn 10 phút
+                clearInterval(checkInterval);
+                if (a.parentNode) document.body.removeChild(a);
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    btn.classList.remove('btn-loading');
+                }
+            }
+        }, 1000);
     };
 
     function showError(msg) {
