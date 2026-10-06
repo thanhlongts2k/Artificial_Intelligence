@@ -10,8 +10,10 @@ import threading
 import logging
 import webbrowser
 import socket
+import urllib.request
+import urllib.error
 import imageio_ffmpeg
-from flask import Flask, request, jsonify, render_template, send_file, has_request_context
+from flask import Flask, request, jsonify, render_template, send_file, has_request_context, Response, stream_with_context
 from flask_cors import CORS
 
 # Detect Environment
@@ -159,6 +161,17 @@ def format_duration(seconds):
 @app.route('/')
 def home():
     return render_template('index.html', host_ip=get_lan_ip())
+
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_file(os.path.join(static_folder, 'manifest.json'), mimetype='application/manifest+json')
+
+@app.route('/sw.js')
+def serve_sw():
+    response = send_file(os.path.join(static_folder, 'sw.js'), mimetype='application/javascript')
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 @app.route('/api/info')
 def get_info():
@@ -335,6 +348,138 @@ def debug_info():
         'proxy_present': YOUTUBE_PROXY is not None,
         'python_version': sys.version
     })
+
+# Stream Cache to prevent re-extracting stream URL on rapid seek/Range requests
+STREAM_CACHE = {}
+STREAM_CACHE_TTL = 900  # 15 minutes
+
+def get_cached_stream_info(cache_key):
+    entry = STREAM_CACHE.get(cache_key)
+    if entry and time.time() - entry['timestamp'] < STREAM_CACHE_TTL:
+        return entry['data']
+    return None
+
+def set_cached_stream_info(cache_key, data):
+    now = time.time()
+    for k in list(STREAM_CACHE.keys()):
+        if now - STREAM_CACHE[k]['timestamp'] > STREAM_CACHE_TTL:
+            STREAM_CACHE.pop(k, None)
+    STREAM_CACHE[cache_key] = {'data': data, 'timestamp': now}
+
+@app.route('/api/stream')
+def stream_media():
+    """
+    Streaming proxy hỗ trợ phát video/audio trực tiếp trên trình duyệt,
+    xử lý đầy đủ HTTP Range (206 Partial Content) để tua mượt mà và chạy dưới nền di động.
+    """
+    url = request.args.get('url')
+    stream_type = request.args.get('type', 'audio')  # 'audio' or 'video'
+    proxy = request.args.get('proxy')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    url = clean_youtube_url(url)
+    
+    cache_key = f"{url}_{stream_type}_{proxy or ''}"
+    stream_info = get_cached_stream_info(cache_key)
+    
+    if not stream_info:
+        ydl_opts = setup_ydl_opts({
+            'quiet': True,
+            'no_warnings': True,
+            'ffmpeg_location': FFMPEG_PATH,
+        })
+        if proxy:
+            ydl_opts['proxy'] = proxy
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                selected_format = None
+                
+                if stream_type == 'audio':
+                    # Ưu tiên m4a (AAC) để tương thích chuẩn với iOS Safari & Android Chrome
+                    selected_format = next(
+                        (f for f in info.get('formats', []) if f.get('ext') == 'm4a' and f.get('acodec') != 'none' and f.get('url')),
+                        None
+                    )
+                    if not selected_format:
+                        selected_format = next(
+                            (f for f in info.get('formats', []) if f.get('acodec') != 'none' and f.get('url')),
+                            None
+                        )
+                else:
+                    # Video: Ưu tiên progressive MP4 (có cả vcodec và acodec, vd format 18 = 360p, 22 = 720p)
+                    selected_format = next(
+                        (f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4' and f.get('url')),
+                        None
+                    )
+                    if not selected_format:
+                        selected_format = next(
+                            (f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url')),
+                            None
+                        )
+
+                if not selected_format or not selected_format.get('url'):
+                    return jsonify({'error': 'Không tìm thấy stream trực tiếp phù hợp'}), 404
+
+                content_type = ('audio/webm' if selected_format.get('ext') == 'webm' else 'audio/mp4') if stream_type == 'audio' else ('video/webm' if selected_format.get('ext') == 'webm' else 'video/mp4')
+
+                stream_info = {
+                    'url': selected_format['url'],
+                    'http_headers': selected_format.get('http_headers', {}),
+                    'ext': selected_format.get('ext', 'mp4'),
+                    'content_type': content_type
+                }
+                set_cached_stream_info(cache_key, stream_info)
+        except Exception as e:
+            return jsonify({'error': f"Lỗi trích xuất stream: {str(e)}"}), 500
+
+    stream_target_url = stream_info['url']
+    http_headers = stream_info.get('http_headers', {}).copy()
+    if 'User-Agent' not in http_headers and 'user-agent' not in http_headers:
+        http_headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    
+    # Chuyển tiếp Range header từ client (Safari/Chrome yêu cầu Range để seek)
+    range_header = request.headers.get('Range')
+    if range_header:
+        http_headers['Range'] = range_header
+
+    try:
+        req = urllib.request.Request(stream_target_url, headers=http_headers)
+        upstream_resp = urllib.request.urlopen(req, timeout=20)
+        status_code = upstream_resp.status
+        
+        response_headers = {
+            'Content-Type': stream_info['content_type'],
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': '*',
+        }
+        if upstream_resp.headers.get('Content-Range'):
+            response_headers['Content-Range'] = upstream_resp.headers.get('Content-Range')
+        if upstream_resp.headers.get('Content-Length'):
+            response_headers['Content-Length'] = upstream_resp.headers.get('Content-Length')
+
+        def generate_chunks():
+            try:
+                while True:
+                    chunk = upstream_resp.read(64 * 1024)  # 64KB chunks
+                    if not chunk:
+                        break
+                    yield chunk
+            except (GeneratorExit, socket.error):
+                pass
+            finally:
+                upstream_resp.close()
+
+        return Response(stream_with_context(generate_chunks()), status=status_code, headers=response_headers)
+    except urllib.error.HTTPError as he:
+        STREAM_CACHE.pop(cache_key, None)
+        return jsonify({'error': f"Upstream stream error: {he.code}"}), he.code
+    except Exception as e:
+        STREAM_CACHE.pop(cache_key, None)
+        return jsonify({'error': f"Lỗi kết nối stream: {str(e)}"}), 500
 
 @app.route('/api/download')
 def download_video():

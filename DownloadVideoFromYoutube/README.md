@@ -8,6 +8,8 @@
 
 - **Chất lượng đa dạng**: Tải từ 144p, 360p, 720p HD, 1080p Full HD đến 4K (2160p).
 - **Tự động ghép Audio & Video**: Tự động ghép luồng video chất lượng cao với âm thanh tốt nhất qua FFmpeg mà không làm giảm chất lượng.
+- **Phát nhạc & Video chạy ngầm (Background Playback)**: Hỗ trợ nghe nhạc khi tắt màn hình hoặc chuyển tab trên cả **iOS & Android** qua Media Session API, hỗ trợ chế độ Cửa sổ nổi Picture-in-Picture (PiP).
+- **Ứng dụng Web lũy tiến (PWA)**: Hỗ trợ cài đặt trực tiếp lên màn hình chính điện thoại / máy tính (Install App), hoạt động toàn màn hình độc lập như Native App với Service Worker đệm App Shell siêu tốc.
 - **Hỗ trợ mạng LAN & QR Code**: Tự động hiển thị địa chỉ IP mạng nội bộ và mã QR để điện thoại có thể quét và tải video cùng lúc.
 - **Cấu hình Proxy nâng cao**: Tùy chọn nhập HTTP Proxy trực tiếp trên giao diện để vượt qua giới hạn địa lý hoặc hạn chế của YouTube.
 - **Đóng gói EXE**: Hỗ trợ build thành file chạy `.exe` độc lập bằng PyInstaller.

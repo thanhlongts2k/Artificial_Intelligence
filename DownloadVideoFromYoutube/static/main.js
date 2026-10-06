@@ -10,6 +10,100 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsPanel = document.getElementById('settingsPanel');
     const proxyUrlInput = document.getElementById('proxyUrl');
 
+    // ===== Background & PiP Media Player Elements & State =====
+    let currentVideoData = null;
+    let currentStreamUrl = null;
+    let currentPlayerMode = 'audio'; // 'audio' | 'video'
+    let wakeLock = null;
+
+    const playBgBtn = document.getElementById('playBgBtn');
+    const playerSection = document.getElementById('playerSection');
+    const bgAudioPlayer = document.getElementById('bgAudioPlayer');
+    const bgVideoPlayer = document.getElementById('bgVideoPlayer');
+    const videoContainer = document.getElementById('videoContainer');
+    const modeAudioBtn = document.getElementById('modeAudioBtn');
+    const modeVideoBtn = document.getElementById('modeVideoBtn');
+    const closePlayerBtn = document.getElementById('closePlayerBtn');
+    const pipBtn = document.getElementById('pipBtn');
+    const mainPlayPauseBtn = document.getElementById('mainPlayPauseBtn');
+    const playPauseIcon = document.getElementById('playPauseIcon');
+    const playerSeek = document.getElementById('playerSeek');
+    const playerCurrentTime = document.getElementById('playerCurrentTime');
+    const playerDuration = document.getElementById('playerDuration');
+    const seekBackBtn = document.getElementById('seekBackBtn');
+    const seekForwardBtn = document.getElementById('seekForwardBtn');
+    const playerStatusText = document.getElementById('playerStatusText');
+
+    // ===== PWA Install & Service Worker Management =====
+    const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+    const iosInstallModal = document.getElementById('iosInstallModal');
+    const closeIosModal = document.getElementById('closeIosModal');
+    let deferredInstallPrompt = null;
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (!isStandalone) {
+        if (isIos) {
+            // Hiển thị nút trên iOS để hướng dẫn Thêm vào Màn hình chính
+            pwaInstallBtn.style.display = 'inline-flex';
+        }
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        if (!isStandalone) {
+            pwaInstallBtn.style.display = 'inline-flex';
+        }
+    });
+
+    if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener('click', async () => {
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    pwaInstallBtn.style.display = 'none';
+                    showToast('🎉 Đang tiến hành cài đặt ứng dụng...');
+                }
+                deferredInstallPrompt = null;
+            } else if (isIos && iosInstallModal) {
+                iosInstallModal.style.display = 'flex';
+            } else {
+                showToast('💡 Mẹo: Bấm menu 3 chấm trên trình duyệt > chọn "Cài đặt ứng dụng" hoặc "Thêm vào màn hình chính".');
+            }
+        });
+    }
+
+    if (closeIosModal && iosInstallModal) {
+        closeIosModal.addEventListener('click', () => {
+            iosInstallModal.style.display = 'none';
+        });
+        iosInstallModal.addEventListener('click', (e) => {
+            if (e.target === iosInstallModal) iosInstallModal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('appinstalled', () => {
+        if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
+        deferredInstallPrompt = null;
+        showToast('🎉 Ứng dụng đã được cài đặt thành công!');
+    });
+
+    // Đăng ký Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then((reg) => {
+                    console.log('[PWA] Service Worker registered:', reg.scope);
+                })
+                .catch((err) => {
+                    console.warn('[PWA] Service Worker registration failed:', err);
+                });
+        });
+    }
+
     // Khởi tạo Mã QR (Tự động lấy URL hiện tại của trang web)
     const currentUrl = window.location.origin;
     new QRCode(document.getElementById("qrcode"), {
@@ -94,6 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function displayVideoInfo(data, originalUrl) {
+        currentVideoData = data;
+        currentStreamUrl = originalUrl;
+        resetPlayer();
+
         document.getElementById('videoTitle').textContent = data.title;
         
         let metaParts = [];
@@ -268,7 +366,301 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetUI() {
         errorMsg.style.display = 'none';
         resultContainer.style.display = 'none';
+        resetPlayer();
     }
+
+    // ===== Player Controller Logic =====
+    function formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '00:00';
+        const s = Math.floor(seconds);
+        const hrs = Math.floor(s / 3600);
+        const mins = Math.floor((s % 3600) / 60);
+        const secs = s % 60;
+        if (hrs > 0) {
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function getActivePlayer() {
+        return currentPlayerMode === 'video' ? bgVideoPlayer : bgAudioPlayer;
+    }
+
+    function updatePlayButtonsState(isPlaying) {
+        if (isPlaying) {
+            playPauseIcon.textContent = '⏸';
+            playBgBtn.classList.add('is-playing');
+            playBgBtn.innerHTML = '<span class="play-icon">⏸</span> <span class="play-text">Tạm dừng</span>';
+            playerStatusText.textContent = currentPlayerMode === 'video' 
+                ? 'Đang phát video. Nhấn "Cửa sổ nổi (PiP)" để xem khi chuyển ứng dụng.'
+                : 'Đang phát nền (iOS & Android). Bạn có thể tắt màn hình hoặc chuyển tab.';
+        } else {
+            playPauseIcon.textContent = '▶';
+            playBgBtn.classList.remove('is-playing');
+            playBgBtn.innerHTML = '<span class="play-icon">▶</span> <span class="play-text">Phát dưới nền</span>';
+            playerStatusText.textContent = 'Đã tạm dừng. Bấm nút Phát để tiếp tục.';
+        }
+    }
+
+    async function requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {
+                // Ignore wake lock denial
+            }
+        }
+    }
+
+    function releaseWakeLock() {
+        if (wakeLock) {
+            wakeLock.release().then(() => { wakeLock = null; }).catch(() => {});
+        }
+    }
+
+    function setupMediaSession() {
+        if ('mediaSession' in navigator && currentVideoData) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: currentVideoData.title,
+                artist: currentVideoData.uploader || 'YouTube',
+                album: 'YouTube Downloader Stream',
+                artwork: [
+                    { src: currentVideoData.thumbnail, sizes: '512x512', type: 'image/jpeg' }
+                ]
+            });
+
+            navigator.mediaSession.setActionHandler('play', () => {
+                const active = getActivePlayer();
+                active.play().catch(e => console.error(e));
+            });
+            navigator.mediaSession.setActionHandler('pause', () => {
+                const active = getActivePlayer();
+                active.pause();
+            });
+            navigator.mediaSession.setActionHandler('seekbackward', () => {
+                const active = getActivePlayer();
+                active.currentTime = Math.max(0, (active.currentTime || 0) - 10);
+            });
+            navigator.mediaSession.setActionHandler('seekforward', () => {
+                const active = getActivePlayer();
+                const dur = active.duration || 999999;
+                active.currentTime = Math.min(dur, (active.currentTime || 0) + 10);
+            });
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                const active = getActivePlayer();
+                if (details.seekTime !== undefined) {
+                    active.currentTime = details.seekTime;
+                }
+            });
+        }
+    }
+
+    function startStreamPlayback(mode = 'audio') {
+        if (!currentVideoData || !currentStreamUrl) return;
+
+        playerSection.style.display = 'block';
+        const proxy = proxyUrlInput.value.trim();
+        let streamEndpoint = `/api/stream?url=${encodeURIComponent(currentStreamUrl)}&type=${mode}`;
+        if (proxy) streamEndpoint += `&proxy=${encodeURIComponent(proxy)}`;
+
+        const activePlayer = mode === 'video' ? bgVideoPlayer : bgAudioPlayer;
+        const inactivePlayer = mode === 'video' ? bgAudioPlayer : bgVideoPlayer;
+
+        inactivePlayer.pause();
+
+        let prevTime = 0;
+        if (activePlayer.src && activePlayer.src.includes('/api/stream')) {
+            prevTime = activePlayer.currentTime || 0;
+        } else if (inactivePlayer.currentTime) {
+            prevTime = inactivePlayer.currentTime;
+        }
+
+        const fullTargetUrl = window.location.origin + streamEndpoint;
+        if (activePlayer.src !== fullTargetUrl) {
+            activePlayer.src = streamEndpoint;
+            if (prevTime > 0) {
+                activePlayer.currentTime = prevTime;
+            }
+        }
+
+        playerStatusText.textContent = 'Đang đệm âm thanh...';
+        activePlayer.play().then(() => {
+            updatePlayButtonsState(true);
+            setupMediaSession();
+            requestWakeLock();
+        }).catch(err => {
+            console.error('Playback error:', err);
+            playerStatusText.textContent = 'Vui lòng chạm nút Phát để cấp quyền phát âm thanh.';
+        });
+    }
+
+    function togglePlayback() {
+        const active = getActivePlayer();
+        if (playerSection.style.display === 'none') {
+            playerSection.style.display = 'block';
+            startStreamPlayback(currentPlayerMode);
+            return;
+        }
+
+        if (active.paused) {
+            if (!active.src) {
+                startStreamPlayback(currentPlayerMode);
+            } else {
+                active.play().then(() => {
+                    updatePlayButtonsState(true);
+                    setupMediaSession();
+                    requestWakeLock();
+                }).catch(err => console.error(err));
+            }
+        } else {
+            active.pause();
+            updatePlayButtonsState(false);
+            releaseWakeLock();
+        }
+    }
+
+    function switchPlayerMode(newMode) {
+        if (currentPlayerMode === newMode) return;
+        const oldPlayer = getActivePlayer();
+        const currentTime = oldPlayer.currentTime || 0;
+        const wasPlaying = !oldPlayer.paused;
+
+        oldPlayer.pause();
+        currentPlayerMode = newMode;
+
+        if (newMode === 'video') {
+            modeVideoBtn.classList.add('active');
+            modeAudioBtn.classList.remove('active');
+            videoContainer.style.display = 'block';
+        } else {
+            modeAudioBtn.classList.add('active');
+            modeVideoBtn.classList.remove('active');
+            videoContainer.style.display = 'none';
+        }
+
+        const newPlayer = getActivePlayer();
+        const proxy = proxyUrlInput.value.trim();
+        let streamEndpoint = `/api/stream?url=${encodeURIComponent(currentStreamUrl)}&type=${newMode}`;
+        if (proxy) streamEndpoint += `&proxy=${encodeURIComponent(proxy)}`;
+
+        newPlayer.src = streamEndpoint;
+        newPlayer.currentTime = currentTime;
+
+        if (wasPlaying) {
+            newPlayer.play().then(() => {
+                updatePlayButtonsState(true);
+                setupMediaSession();
+            }).catch(e => console.error(e));
+        } else {
+            updatePlayButtonsState(false);
+        }
+    }
+
+    function resetPlayer() {
+        bgAudioPlayer.pause();
+        bgAudioPlayer.src = '';
+        bgVideoPlayer.pause();
+        bgVideoPlayer.src = '';
+        releaseWakeLock();
+        playerSection.style.display = 'none';
+        updatePlayButtonsState(false);
+        playerSeek.value = 0;
+        playerCurrentTime.textContent = '00:00';
+        playerDuration.textContent = '00:00';
+        currentPlayerMode = 'audio';
+        modeAudioBtn.classList.add('active');
+        modeVideoBtn.classList.remove('active');
+        videoContainer.style.display = 'none';
+    }
+
+    [bgAudioPlayer, bgVideoPlayer].forEach(player => {
+        player.addEventListener('timeupdate', () => {
+            if (player !== getActivePlayer()) return;
+            const current = player.currentTime || 0;
+            const total = player.duration || (currentVideoData ? currentVideoData.duration : 0) || 0;
+            playerCurrentTime.textContent = formatTime(current);
+            if (total > 0 && !isNaN(total)) {
+                playerDuration.textContent = formatTime(total);
+                playerSeek.value = (current / total) * 100;
+            }
+        });
+
+        player.addEventListener('play', () => {
+            if (player === getActivePlayer()) updatePlayButtonsState(true);
+        });
+
+        player.addEventListener('pause', () => {
+            if (player === getActivePlayer()) updatePlayButtonsState(false);
+        });
+
+        player.addEventListener('ended', () => {
+            if (player === getActivePlayer()) {
+                updatePlayButtonsState(false);
+                releaseWakeLock();
+            }
+        });
+
+        player.addEventListener('loadedmetadata', () => {
+            if (player === getActivePlayer() && player.duration) {
+                playerDuration.textContent = formatTime(player.duration);
+            }
+        });
+    });
+
+    playerSeek.addEventListener('input', () => {
+        const active = getActivePlayer();
+        const total = active.duration || (currentVideoData ? currentVideoData.duration : 0) || 0;
+        if (total > 0) {
+            const seekTo = (playerSeek.value / 100) * total;
+            playerCurrentTime.textContent = formatTime(seekTo);
+        }
+    });
+
+    playerSeek.addEventListener('change', () => {
+        const active = getActivePlayer();
+        const total = active.duration || (currentVideoData ? currentVideoData.duration : 0) || 0;
+        if (total > 0) {
+            active.currentTime = (playerSeek.value / 100) * total;
+        }
+    });
+
+    seekBackBtn.addEventListener('click', () => {
+        const active = getActivePlayer();
+        active.currentTime = Math.max(0, (active.currentTime || 0) - 10);
+    });
+
+    seekForwardBtn.addEventListener('click', () => {
+        const active = getActivePlayer();
+        const dur = active.duration || (currentVideoData ? currentVideoData.duration : 0) || 999999;
+        active.currentTime = Math.min(dur, (active.currentTime || 0) + 10);
+    });
+
+    mainPlayPauseBtn.addEventListener('click', togglePlayback);
+    playBgBtn.addEventListener('click', togglePlayback);
+
+    modeAudioBtn.addEventListener('click', () => switchPlayerMode('audio'));
+    modeVideoBtn.addEventListener('click', () => switchPlayerMode('video'));
+
+    closePlayerBtn.addEventListener('click', () => {
+        const active = getActivePlayer();
+        active.pause();
+        updatePlayButtonsState(false);
+        releaseWakeLock();
+        playerSection.style.display = 'none';
+    });
+
+    pipBtn.addEventListener('click', async () => {
+        try {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else if (document.pictureInPictureEnabled && bgVideoPlayer) {
+                await bgVideoPlayer.requestPictureInPicture();
+            }
+        } catch (err) {
+            console.error('PiP Error:', err);
+            showToast('Thiết bị hoặc trình duyệt này không hỗ trợ chế độ Cửa sổ nổi PiP.');
+        }
+    });
 
     // Allow enter key to trigger search
     videoUrlInput.addEventListener('keypress', (e) => {
