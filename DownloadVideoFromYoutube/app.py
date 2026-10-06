@@ -112,9 +112,8 @@ def setup_ydl_opts(opts):
     if YOUTUBE_POT: yt_args['po_token'] = [YOUTUBE_POT]
     if YOUTUBE_VISITOR_DATA: yt_args['visitor_data'] = [YOUTUBE_VISITOR_DATA]
 
-    # Fallback to multi-client if no JS runtime is available
-    if not js_runtimes:
-        yt_args['player_client'] = ['android', 'web', 'ios']
+    # Always ensure multi-client (android, ios, web) so format 18 (progressive MP4) and direct audio are always available
+    yt_args['player_client'] = ['android', 'ios', 'web']
 
     if yt_args:
         base_opts.setdefault('extractor_args', {})['youtube'] = yt_args
@@ -330,7 +329,10 @@ def get_info():
             for stype in ['audio', 'video']:
                 fmt = select_best_stream_format(info, stype)
                 if fmt and fmt.get('url'):
-                    ctype = ('audio/webm' if fmt.get('ext') == 'webm' else 'audio/mp4') if stype == 'audio' else ('video/webm' if fmt.get('ext') == 'webm' else 'video/mp4')
+                    if stype == 'audio':
+                        ctype = 'video/mp4' if fmt.get('vcodec') != 'none' else ('audio/webm' if fmt.get('ext') == 'webm' else 'audio/mp4')
+                    else:
+                        ctype = 'video/webm' if fmt.get('ext') == 'webm' else 'video/mp4'
                     set_cached_stream_info(f"{url}_{stype}_{active_proxy or ''}", {
                         'url': fmt['url'],
                         'http_headers': fmt.get('http_headers', {}),
@@ -386,10 +388,10 @@ def select_best_stream_format(info, stream_type='video'):
     if stream_type == 'audio':
         # 1. Format m4a có audio codec (AAC chuẩn iOS & Android)
         selected_format = next(
-            (f for f in formats if f.get('ext') == 'm4a' and f.get('acodec') != 'none' and f.get('url')),
+            (f for f in formats if (f.get('ext') == 'm4a' or 'mp4a' in str(f.get('acodec', ''))) and f.get('vcodec') == 'none' and f.get('url')),
             None
         )
-        # 2. Format audio bất kỳ có URL
+        # 2. Format audio bất kỳ có URL (WebM/Opus)
         if not selected_format:
             selected_format = next(
                 (f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('url')),
@@ -469,7 +471,10 @@ def stream_media():
                 if not selected_format or not selected_format.get('url'):
                     return jsonify({'error': 'Không tìm thấy stream trực tiếp phù hợp'}), 404
 
-                content_type = ('audio/webm' if selected_format.get('ext') == 'webm' else 'audio/mp4') if stream_type == 'audio' else ('video/webm' if selected_format.get('ext') == 'webm' else 'video/mp4')
+                if stream_type == 'audio':
+                    content_type = 'video/mp4' if selected_format.get('vcodec') != 'none' else ('audio/webm' if selected_format.get('ext') == 'webm' else 'audio/mp4')
+                else:
+                    content_type = 'video/webm' if selected_format.get('ext') == 'webm' else 'video/mp4'
 
                 stream_info = {
                     'url': selected_format['url'],
@@ -513,6 +518,7 @@ def stream_media():
             'Accept-Ranges': 'bytes',
             'Cache-Control': 'no-cache',
             'Access-Control-Allow-Origin': '*',
+            'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
         }
         if upstream_resp.headers.get('Content-Range'):
             response_headers['Content-Range'] = upstream_resp.headers.get('Content-Range')

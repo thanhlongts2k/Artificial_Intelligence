@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yt-downloader-pwa-v1';
+const CACHE_NAME = 'yt-downloader-pwa-v2';
 
 const STATIC_ASSETS = [
     '/',

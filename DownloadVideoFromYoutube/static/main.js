@@ -439,19 +439,48 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             navigator.mediaSession.setActionHandler('seekbackward', () => {
                 const active = getActivePlayer();
-                active.currentTime = Math.max(0, (active.currentTime || 0) - 10);
+                safeSetCurrentTime(active, Math.max(0, (active.currentTime || 0) - 10));
             });
             navigator.mediaSession.setActionHandler('seekforward', () => {
                 const active = getActivePlayer();
                 const dur = active.duration || 999999;
-                active.currentTime = Math.min(dur, (active.currentTime || 0) + 10);
+                safeSetCurrentTime(active, Math.min(dur, (active.currentTime || 0) + 10));
             });
             navigator.mediaSession.setActionHandler('seekto', (details) => {
                 const active = getActivePlayer();
                 if (details.seekTime !== undefined) {
-                    active.currentTime = details.seekTime;
+                    safeSetCurrentTime(active, details.seekTime);
                 }
             });
+            try {
+                navigator.mediaSession.setActionHandler('stop', () => {
+                    const active = getActivePlayer();
+                    active.pause();
+                    safeSetCurrentTime(active, 0);
+                    updatePlayButtonsState(false);
+                });
+            } catch (e) {}
+        }
+    }
+
+    function safeSetCurrentTime(player, targetTime) {
+        if (!targetTime || targetTime <= 0 || isNaN(targetTime)) return;
+        if (player.readyState >= 1) {
+            try {
+                player.currentTime = targetTime;
+            } catch (e) {
+                console.warn('[Seek Error]', e);
+            }
+        } else {
+            const onReady = () => {
+                try {
+                    player.currentTime = targetTime;
+                } catch (e) {}
+                player.removeEventListener('loadedmetadata', onReady);
+                player.removeEventListener('canplay', onReady);
+            };
+            player.addEventListener('loadedmetadata', onReady, { once: true });
+            player.addEventListener('canplay', onReady, { once: true });
         }
     }
 
@@ -491,21 +520,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullTargetUrl = window.location.origin + streamEndpoint;
         if (activePlayer.src !== fullTargetUrl) {
             activePlayer.src = streamEndpoint;
-            activePlayer.load();
+            // KHÔNG gọi activePlayer.load() để tránh AbortError trên Safari iOS và Chrome Mobile
             if (prevTime > 0) {
-                activePlayer.currentTime = prevTime;
+                safeSetCurrentTime(activePlayer, prevTime);
             }
         }
 
-        playerStatusText.textContent = mode === 'video' ? 'Đang tải đệm luồng phát...' : 'Đang đệm âm thanh...';
-        activePlayer.play().then(() => {
-            updatePlayButtonsState(true);
-            setupMediaSession();
-            requestWakeLock();
-        }).catch(err => {
-            console.error('Playback error:', err);
-            playerStatusText.textContent = 'Vui lòng chạm nút Phát để cấp quyền trình duyệt.';
-        });
+        playerStatusText.textContent = mode === 'video' ? '⏳ Đang tải đệm luồng phát...' : '⏳ Đang đệm âm thanh...';
+        const playPromise = activePlayer.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                updatePlayButtonsState(true);
+                setupMediaSession();
+                requestWakeLock();
+            }).catch(err => {
+                console.warn('Playback error or user gesture needed:', err);
+                updatePlayButtonsState(false);
+                playerStatusText.textContent = '👆 Chạm nút [▶] bên dưới để cho phép phát trên trình duyệt.';
+            });
+        }
     }
 
     function togglePlayback() {
@@ -559,14 +592,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let streamEndpoint = `/api/stream?url=${encodeURIComponent(currentStreamUrl)}&type=${newMode}`;
         if (proxy) streamEndpoint += `&proxy=${encodeURIComponent(proxy)}`;
 
-        newPlayer.src = streamEndpoint;
-        newPlayer.currentTime = currentTime;
+        const fullTargetUrl = window.location.origin + streamEndpoint;
+        if (newPlayer.src !== fullTargetUrl) {
+            newPlayer.src = streamEndpoint;
+        }
+        if (currentTime > 0) {
+            safeSetCurrentTime(newPlayer, currentTime);
+        }
 
         if (wasPlaying) {
-            newPlayer.play().then(() => {
-                updatePlayButtonsState(true);
-                setupMediaSession();
-            }).catch(e => console.error(e));
+            const p = newPlayer.play();
+            if (p !== undefined) {
+                p.then(() => {
+                    updatePlayButtonsState(true);
+                    setupMediaSession();
+                }).catch(e => {
+                    console.warn(e);
+                    updatePlayButtonsState(false);
+                });
+            }
         } else {
             updatePlayButtonsState(false);
         }
@@ -598,6 +642,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (total > 0 && !isNaN(total)) {
                 playerDuration.textContent = formatTime(total);
                 playerSeek.value = (current / total) * 100;
+
+                // Đồng bộ thanh tiến trình khóa màn hình (iOS Lock Screen & Android Notification)
+                if ('mediaSession' in navigator && typeof navigator.mediaSession.setPositionState === 'function') {
+                    try {
+                        navigator.mediaSession.setPositionState({
+                            duration: total,
+                            playbackRate: player.playbackRate || 1.0,
+                            position: Math.min(current, total)
+                        });
+                    } catch (e) {}
+                }
             }
         });
 
@@ -656,19 +711,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const active = getActivePlayer();
         const total = active.duration || (currentVideoData ? currentVideoData.duration : 0) || 0;
         if (total > 0) {
-            active.currentTime = (playerSeek.value / 100) * total;
+            safeSetCurrentTime(active, (playerSeek.value / 100) * total);
         }
     });
 
     seekBackBtn.addEventListener('click', () => {
         const active = getActivePlayer();
-        active.currentTime = Math.max(0, (active.currentTime || 0) - 10);
+        safeSetCurrentTime(active, Math.max(0, (active.currentTime || 0) - 10));
     });
 
     seekForwardBtn.addEventListener('click', () => {
         const active = getActivePlayer();
         const dur = active.duration || (currentVideoData ? currentVideoData.duration : 0) || 999999;
-        active.currentTime = Math.min(dur, (active.currentTime || 0) + 10);
+        safeSetCurrentTime(active, Math.min(dur, (active.currentTime || 0) + 10));
+    });
+
+    bgVideoPlayer.addEventListener('click', () => {
+        togglePlayback();
     });
 
     mainPlayPauseBtn.addEventListener('click', togglePlayback);
