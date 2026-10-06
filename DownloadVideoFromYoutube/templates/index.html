@@ -109,19 +109,19 @@
                             <div class="player-card">
                                 <div class="player-header">
                                     <div class="player-mode-tabs">
-                                        <button id="modeAudioBtn" class="mode-tab active" type="button">
-                                            🎵 Nghe ngầm (Khóa màn hình)
+                                        <button id="modeVideoBtn" class="mode-tab active" type="button">
+                                            🎬 Xem Video & PiP
                                         </button>
-                                        <button id="modeVideoBtn" class="mode-tab" type="button">
-                                            🎬 Video & PiP
+                                        <button id="modeAudioBtn" class="mode-tab" type="button">
+                                            🎵 Nghe ngầm (Tắt màn hình)
                                         </button>
                                     </div>
                                     <button id="closePlayerBtn" class="player-close-btn" type="button" title="Đóng trình phát">✕</button>
                                 </div>
 
-                                <!-- Video Container (chỉ mở khi chọn tab Video) -->
-                                <div id="videoContainer" class="player-video-wrap" style="display: none;">
-                                    <video id="bgVideoPlayer" playsinline webkit-playsinline></video>
+                                <!-- Video Container (hiển thị mặc định có cả hình và tiếng) -->
+                                <div id="videoContainer" class="player-video-wrap">
+                                    <video id="bgVideoPlayer" playsinline webkit-playsinline controls></video>
                                     <button id="pipBtn" class="btn-pip" type="button" title="Mở cửa sổ nổi PiP">
                                         🔲 Cửa sổ nổi (PiP)
                                     </button>

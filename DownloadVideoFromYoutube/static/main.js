@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Background & PiP Media Player Elements & State =====
     let currentVideoData = null;
     let currentStreamUrl = null;
-    let currentPlayerMode = 'audio'; // 'audio' | 'video'
+    let currentPlayerMode = 'video'; // 'video' | 'audio'
     let wakeLock = null;
 
     const playBgBtn = document.getElementById('playBgBtn');
@@ -455,10 +455,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function startStreamPlayback(mode = 'audio') {
+    function startStreamPlayback(mode = 'video') {
         if (!currentVideoData || !currentStreamUrl) return;
 
         playerSection.style.display = 'block';
+        currentPlayerMode = mode;
+        if (mode === 'video') {
+            modeVideoBtn.classList.add('active');
+            modeAudioBtn.classList.remove('active');
+            videoContainer.style.display = 'block';
+            bgVideoPlayer.setAttribute('playsinline', '');
+            bgVideoPlayer.setAttribute('webkit-playsinline', '');
+        } else {
+            modeAudioBtn.classList.add('active');
+            modeVideoBtn.classList.remove('active');
+            videoContainer.style.display = 'none';
+        }
+
         const proxy = proxyUrlInput.value.trim();
         let streamEndpoint = `/api/stream?url=${encodeURIComponent(currentStreamUrl)}&type=${mode}`;
         if (proxy) streamEndpoint += `&proxy=${encodeURIComponent(proxy)}`;
@@ -478,19 +491,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullTargetUrl = window.location.origin + streamEndpoint;
         if (activePlayer.src !== fullTargetUrl) {
             activePlayer.src = streamEndpoint;
+            activePlayer.load();
             if (prevTime > 0) {
                 activePlayer.currentTime = prevTime;
             }
         }
 
-        playerStatusText.textContent = 'Đang đệm âm thanh...';
+        playerStatusText.textContent = mode === 'video' ? 'Đang tải đệm luồng phát...' : 'Đang đệm âm thanh...';
         activePlayer.play().then(() => {
             updatePlayButtonsState(true);
             setupMediaSession();
             requestWakeLock();
         }).catch(err => {
             console.error('Playback error:', err);
-            playerStatusText.textContent = 'Vui lòng chạm nút Phát để cấp quyền phát âm thanh.';
+            playerStatusText.textContent = 'Vui lòng chạm nút Phát để cấp quyền trình duyệt.';
         });
     }
 
@@ -532,6 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
             modeVideoBtn.classList.add('active');
             modeAudioBtn.classList.remove('active');
             videoContainer.style.display = 'block';
+            bgVideoPlayer.setAttribute('playsinline', '');
+            bgVideoPlayer.setAttribute('webkit-playsinline', '');
         } else {
             modeAudioBtn.classList.add('active');
             modeVideoBtn.classList.remove('active');
@@ -567,10 +583,10 @@ document.addEventListener('DOMContentLoaded', () => {
         playerSeek.value = 0;
         playerCurrentTime.textContent = '00:00';
         playerDuration.textContent = '00:00';
-        currentPlayerMode = 'audio';
-        modeAudioBtn.classList.add('active');
-        modeVideoBtn.classList.remove('active');
-        videoContainer.style.display = 'none';
+        currentPlayerMode = 'video';
+        modeVideoBtn.classList.add('active');
+        modeAudioBtn.classList.remove('active');
+        videoContainer.style.display = 'block';
     }
 
     [bgAudioPlayer, bgVideoPlayer].forEach(player => {
@@ -591,6 +607,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         player.addEventListener('pause', () => {
             if (player === getActivePlayer()) updatePlayButtonsState(false);
+        });
+
+        player.addEventListener('waiting', () => {
+            if (player === getActivePlayer()) {
+                playerStatusText.textContent = '⏳ Đang đệm luồng phát...';
+            }
+        });
+
+        player.addEventListener('playing', () => {
+            if (player === getActivePlayer()) {
+                updatePlayButtonsState(true);
+            }
+        });
+
+        player.addEventListener('error', () => {
+            if (player === getActivePlayer()) {
+                console.error('[Media Error]', player.error);
+                playerStatusText.textContent = '❌ Lỗi luồng phát. Hãy thử chạm lại nút Phát để tải lại.';
+                updatePlayButtonsState(false);
+            }
         });
 
         player.addEventListener('ended', () => {

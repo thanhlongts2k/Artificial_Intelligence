@@ -325,6 +325,19 @@ def get_info():
                     'type': 'audio'
                 })
 
+            # Pre-cache stream info for immediate zero-delay playback
+            active_proxy = request.args.get('proxy') or YOUTUBE_PROXY
+            for stype in ['audio', 'video']:
+                fmt = select_best_stream_format(info, stype)
+                if fmt and fmt.get('url'):
+                    ctype = ('audio/webm' if fmt.get('ext') == 'webm' else 'audio/mp4') if stype == 'audio' else ('video/webm' if fmt.get('ext') == 'webm' else 'video/mp4')
+                    set_cached_stream_info(f"{url}_{stype}_{active_proxy or ''}", {
+                        'url': fmt['url'],
+                        'http_headers': fmt.get('http_headers', {}),
+                        'ext': fmt.get('ext', 'mp4'),
+                        'content_type': ctype
+                    })
+
             return jsonify({
                 'title': info.get('title'),
                 'thumbnail': info.get('thumbnail'),
@@ -366,21 +379,72 @@ def set_cached_stream_info(cache_key, data):
             STREAM_CACHE.pop(k, None)
     STREAM_CACHE[cache_key] = {'data': data, 'timestamp': now}
 
+def select_best_stream_format(info, stream_type='video'):
+    formats = info.get('formats', [])
+    selected_format = None
+    
+    if stream_type == 'audio':
+        # 1. Format m4a có audio codec (AAC chuẩn iOS & Android)
+        selected_format = next(
+            (f for f in formats if f.get('ext') == 'm4a' and f.get('acodec') != 'none' and f.get('url')),
+            None
+        )
+        # 2. Format audio bất kỳ có URL
+        if not selected_format:
+            selected_format = next(
+                (f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('url')),
+                None
+            )
+        # 3. Fallback: Progressive MP4 (format 18 chứa AAC audio rất nhẹ)
+        if not selected_format:
+            selected_format = next(
+                (f for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url')),
+                None
+            )
+    else:
+        # stream_type == 'video'
+        # 1. Progressive MP4 (có cả vcodec và acodec, vd format 18, 22)
+        selected_format = next(
+            (f for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4' and f.get('url')),
+            None
+        )
+        # 2. Format có cả vcodec và acodec bất kỳ
+        if not selected_format:
+            selected_format = next(
+                (f for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url')),
+                None
+            )
+        # 3. Format video mp4 bất kỳ có URL
+        if not selected_format:
+            selected_format = next(
+                (f for f in formats if f.get('vcodec') != 'none' and f.get('ext') == 'mp4' and f.get('url')),
+                None
+            )
+        # 4. Format video bất kỳ có URL
+        if not selected_format:
+            selected_format = next(
+                (f for f in formats if f.get('vcodec') != 'none' and f.get('url')),
+                None
+            )
+            
+    return selected_format
+
 @app.route('/api/stream')
 def stream_media():
     """
     Streaming proxy hỗ trợ phát video/audio trực tiếp trên trình duyệt,
-    xử lý đầy đủ HTTP Range (206 Partial Content) để tua mượt mà và chạy dưới nền di động.
+    xử lý đầy đủ HTTP Range (206 Partial Content), định tuyến chuẩn qua Proxy
+    để bypass 403 Forbidden và chạy mượt mà dưới nền di động.
     """
     url = request.args.get('url')
-    stream_type = request.args.get('type', 'audio')  # 'audio' or 'video'
-    proxy = request.args.get('proxy')
+    stream_type = request.args.get('type', 'video')  # Mặc định là video
+    active_proxy = request.args.get('proxy') or YOUTUBE_PROXY
     
     if not url:
         return jsonify({'error': 'URL is required'}), 400
     url = clean_youtube_url(url)
     
-    cache_key = f"{url}_{stream_type}_{proxy or ''}"
+    cache_key = f"{url}_{stream_type}_{active_proxy or ''}"
     stream_info = get_cached_stream_info(cache_key)
     
     if not stream_info:
@@ -389,36 +453,18 @@ def stream_media():
             'no_warnings': True,
             'ffmpeg_location': FFMPEG_PATH,
         })
-        if proxy:
-            ydl_opts['proxy'] = proxy
+        if active_proxy:
+            ydl_opts['proxy'] = active_proxy
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                selected_format = None
+                selected_format = select_best_stream_format(info, stream_type)
                 
-                if stream_type == 'audio':
-                    # Ưu tiên m4a (AAC) để tương thích chuẩn với iOS Safari & Android Chrome
-                    selected_format = next(
-                        (f for f in info.get('formats', []) if f.get('ext') == 'm4a' and f.get('acodec') != 'none' and f.get('url')),
-                        None
-                    )
-                    if not selected_format:
-                        selected_format = next(
-                            (f for f in info.get('formats', []) if f.get('acodec') != 'none' and f.get('url')),
-                            None
-                        )
-                else:
-                    # Video: Ưu tiên progressive MP4 (có cả vcodec và acodec, vd format 18 = 360p, 22 = 720p)
-                    selected_format = next(
-                        (f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4' and f.get('url')),
-                        None
-                    )
-                    if not selected_format:
-                        selected_format = next(
-                            (f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url')),
-                            None
-                        )
+                if not selected_format or not selected_format.get('url'):
+                    # Fallback chéo nếu kiểu yêu cầu không tìm thấy
+                    fallback_type = 'audio' if stream_type == 'video' else 'video'
+                    selected_format = select_best_stream_format(info, fallback_type)
 
                 if not selected_format or not selected_format.get('url'):
                     return jsonify({'error': 'Không tìm thấy stream trực tiếp phù hợp'}), 404
@@ -447,7 +493,19 @@ def stream_media():
 
     try:
         req = urllib.request.Request(stream_target_url, headers=http_headers)
-        upstream_resp = urllib.request.urlopen(req, timeout=20)
+        
+        # BẮT BUỘC: Khi server có cấu hình YOUTUBE_PROXY, request upstream stream
+        # PHẢI định tuyến qua cùng proxy đó để khớp IP signature của googlevideo, tránh lỗi 403 Forbidden
+        if active_proxy:
+            proxy_handler = urllib.request.ProxyHandler({
+                'http': active_proxy,
+                'https': active_proxy
+            })
+            opener = urllib.request.build_opener(proxy_handler)
+        else:
+            opener = urllib.request.build_opener()
+
+        upstream_resp = opener.open(req, timeout=25)
         status_code = upstream_resp.status
         
         response_headers = {
@@ -468,10 +526,13 @@ def stream_media():
                     if not chunk:
                         break
                     yield chunk
-            except (GeneratorExit, socket.error):
+            except (GeneratorExit, socket.error, Exception):
                 pass
             finally:
-                upstream_resp.close()
+                try:
+                    upstream_resp.close()
+                except Exception:
+                    pass
 
         return Response(stream_with_context(generate_chunks()), status=status_code, headers=response_headers)
     except urllib.error.HTTPError as he:
