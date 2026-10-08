@@ -259,8 +259,8 @@ def search_videos():
     if not query:
         return jsonify({'error': 'Vui lòng nhập từ khóa tìm kiếm'}), 400
     
-    limit = request.args.get('limit', 10, type=int)
-    limit = max(1, min(limit, 20))
+    limit = request.args.get('limit', 20, type=int)
+    limit = max(1, min(limit, 30))
     
     ydl_opts = setup_ydl_opts({
         'extract_flat': True,
@@ -319,7 +319,7 @@ def search_videos():
         'results': results
     })
 
-APP_VERSION = "2.3.3"
+APP_VERSION = "2.4.0"
 
 @app.route('/')
 def home():

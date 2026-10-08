@@ -2,6 +2,25 @@
 
 Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Flask + yt-dlp)** được ghi lại trong tài liệu này theo chuẩn [Keep a Changelog](https://keepachangelog.com/vi/1.0.0/) và tuân thủ nguyên tắc [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] — 2026-10-08
+
+### [Added]
+- **Bung rộng giao diện PC & Lưới video Responsive 3 - 4 cột**:
+  - Mở rộng container hiển thị trên PC/Desktop lên `1380px` (màn hình lớn $\ge 1280\text{px}$) và `1140px` (laptop $\ge 992\text{px}$), mang lại không gian hiển thị rộng rãi, hiện đại tương tự giao diện YouTube Desktop.
+  - Tối ưu UX thanh tìm kiếm (`.search-box`), tiêu đề và cấu hình nâng cao giữ độ rộng tập trung (`max-width: 840px`), căn giữa trang nhã.
+  - Tái cấu trúc lưới kết quả tìm kiếm (`.search-results-grid`) theo hệ thống breakpoint thông minh:
+    - Màn hình PC rộng ($\ge 1280\text{px}$): **4 video / hàng**.
+    - Laptop / Desktop vừa ($992\text{px} - 1279\text{px}$): **3 video / hàng**.
+    - Máy tính bảng / Tablet ($640\text{px} - 991\text{px}$): **2 video / hàng**.
+    - Điện thoại di động ($< 640\text{px}$): **1 video / hàng**.
+- **Tăng số lượng kết quả tìm kiếm lên 20 video**:
+  - Nâng giới hạn kết quả tìm kiếm mặc định từ 10 lên **20 video** (`limit=20`), chia đều hoàn hảo cho cả lưới 4 cột (5 hàng) và 2 cột (10 hàng).
+
+### [Removed]
+- **Gỡ bỏ hoàn toàn thành phần Mã QR (QR Code)**:
+  - Loại bỏ phần tử HTML `#qrCodeContainer`, thư viện bên thứ 3 `qrcode.min.js` từ Cloudflare CDN, logic JS khởi tạo `new QRCode` và toàn bộ CSS cố định góc trên bên phải màn hình.
+  - Làm sạch bộ nhớ cache PWA Service Worker (`CACHE_NAME = 'yt-downloader-pwa-v2.4.0'`), giảm thiểu tài nguyên tải trang.
+
 ---
 
 ## [2.3.3] — 2026-10-08

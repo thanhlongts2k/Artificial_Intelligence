@@ -11,7 +11,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │               CLIENT LAYER (Progressive Web App)                │
 │   - HTML5 / CSS3 Dark Glassmorphism                             │
-│   - Service Worker (sw.js - Cache v2.3, Offline App Shell)      │
+│   - Service Worker (sw.js - Cache v2.4.0, Offline App Shell)   │
 │   - Web MediaSession API (Lock Screen, Dynamic Island, Scrubber)│
 │   - Screen WakeLock API & Picture-in-Picture (PiP)              │
 │   - LocalStorage Caching (Playback speed, Proxy config)         │
@@ -64,7 +64,7 @@
 - **Mục đích:** Tìm kiếm danh sách video YouTube siêu tốc.
 - **Query Params:**
   - `q` (string, bắt buộc): Từ khóa tìm kiếm.
-  - `limit` (int, tùy chọn, mặc định 10): Số lượng kết quả (1 - 20).
+  - `limit` (int, tùy chọn, mặc định 20): Số lượng kết quả (1 - 30).
 - **Response Format:**
   ```json
   {

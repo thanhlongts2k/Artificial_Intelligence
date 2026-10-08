@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yt-downloader-pwa-v2.3.3';
+const CACHE_NAME = 'yt-downloader-pwa-v2.4.0';
 
 const STATIC_ASSETS = [
     '/',
@@ -9,7 +9,6 @@ const STATIC_ASSETS = [
     '/static/icons/icon-512.png',
     '/static/icons/apple-touch-icon.png',
     '/static/icons/favicon.png',
-    'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap'
 ];
 

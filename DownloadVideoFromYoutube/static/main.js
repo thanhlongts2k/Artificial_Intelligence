@@ -116,17 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Khởi tạo Mã QR (Tự động lấy URL hiện tại của trang web)
-    const currentUrl = window.location.origin;
-    new QRCode(document.getElementById("qrcode"), {
-        text: currentUrl,
-        width: 180,
-        height: 180,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
-
     // Xử lý ẩn/hiện Cài đặt nâng cao
     toggleSettings.addEventListener('click', () => {
         settingsPanel.classList.toggle('active');
@@ -246,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const proxy = proxyUrlInput.value.trim();
-            let searchUrl = `/api/search?q=${encodeURIComponent(query)}&limit=10`;
+            let searchUrl = `/api/search?q=${encodeURIComponent(query)}&limit=20`;
             if (proxy) searchUrl += `&proxy=${encodeURIComponent(proxy)}`;
 
             const res = await fetch(searchUrl);

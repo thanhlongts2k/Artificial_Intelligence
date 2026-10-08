@@ -180,12 +180,6 @@
                     </div>
                 </div>
             </div>
-
-            <div id="qrCodeContainer" class="qr-container">
-                <p>Mã QR</p>
-                <div id="qrcode"></div>
-            </div>
-
         </main>
 
         <footer class="app-footer">
@@ -202,7 +196,6 @@
         window.APP_VERSION = "{{ app_version }}";
     </script>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="{{ url_for('static', filename='main.js') }}?v={{ app_version }}"></script>
 </body>
 </html>
