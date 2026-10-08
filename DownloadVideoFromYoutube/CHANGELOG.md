@@ -4,6 +4,16 @@ Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Fl
 
 ---
 
+## [2.3.3] — 2026-10-08
+
+### [Fixed]
+- **Tối ưu hóa Fast-Path Engine & Khắc phục triệt để lỗi "Failed to extract any player response"**:
+  - Tái cấu trúc thứ tự ưu tiên trích xuất: Đưa **`tv_embedded`** lên làm Fast-Path số 1 độc lập, giảm thời gian phản hồi từ 30s xuống chỉ còn **~1.3 giây** trên IP Datacenter (Render).
+  - Bổ sung `socket_timeout: 10s` chặn hoàn toàn hiện tượng xoay spinner đơ lâu.
+  - Bổ sung các từ khóa `failed to extract any player response`, `player response`, `unable to extract` vào cơ chế tự cứu hộ `is_recoverable` để ngăn chặn việc ngắt sớm các tầng fallback.
+
+---
+
 ## [2.3.2] — 2026-10-08
 
 ### [Added]
