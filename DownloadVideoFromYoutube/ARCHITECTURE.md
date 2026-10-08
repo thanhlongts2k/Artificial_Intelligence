@@ -45,8 +45,8 @@
 ## 🛡️ 3. Các Bất Biến Hệ Thống (System Invariants)
 
 1. **Bypass BotGuard & Datacenter Ban & Proxy Resilience:**
-   - Bộ `player_client` luôn ưu tiên `['android', 'visionos']`. Tuyệt đối không dùng client `web` độc lập trên môi trường máy chủ đám mây (Render, VPS).
-   - Cơ chế Multi-tier Fallback Engine tự động phục hồi khi gặp sự cố hạn chế IP hoặc Cookie hết hạn.
+   - Bộ `player_client` ưu tiên kết hợp `['android', 'visionos', 'tv_embedded', 'android_creator']`. Tuyệt đối không dùng client `web` độc lập trên môi trường máy chủ đám mây (Render, VPS).
+   - Cơ chế Multi-tier Fallback Engine tự động phục hồi khi gặp sự cố hạn chế IP Datacenter, yêu cầu xác minh bot hoặc Cookie hết hạn.
    - **Tự động khôi phục kết nối (Proxy Auto-Fallback):** Khi Proxy gặp sự cố cạn băng thông (`402 Payment Required`), lỗi xác thực (`407`), hoặc chết kết nối (`Tunnel failed / Connection refused`), hệ thống tự động loại bỏ proxy và fallback sang kết nối trực tiếp (Direct Connection) cho cả tìm kiếm (`/api/search`), trích xuất (`/api/info`), streaming (`/api/stream`), và tải file (`/api/download`).
 2. **Không Cache API Động:**
    - Service Worker (`sw.js`) tuyệt đối không lưu cache các route bắt đầu bằng `/api/` để đảm bảo kết quả tìm kiếm và luồng phát luôn tươi mới.

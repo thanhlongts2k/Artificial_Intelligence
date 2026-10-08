@@ -4,6 +4,20 @@ Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Fl
 
 ---
 
+## [2.3.2] — 2026-10-08
+
+### [Added]
+- **Glass Pill Chip Version Badge & Đồng bộ SSoT**:
+  - Chuẩn hóa phiên bản theo Single Source of Truth (`APP_VERSION = "2.3.2"` tại `app.py`), tự động truyền vào query string của `style.css` và `main.js` để triệt tiêu hoàn toàn lỗi stale cache trên trình duyệt và PWA.
+  - Thiết kế lại huy hiệu phiên bản thành **Glass Pill Chip** bo tròn mềm mại (`border-radius: 9999px`) với hiệu ứng đèn LED xanh xung nhịp (`versionPulse`), đồng bộ tên nhận diện thương hiệu `YT Downloader v2.3.2`.
+
+### [Fixed]
+- **Khắc phục lỗi "Sign in to confirm you're not a bot" trên Datacenter IP (Phương án A)**:
+  - Tích hợp thêm 2 client đặc biệt **`tv_embedded`** và **`android_creator`** vào bộ động cơ phục hồi đa tầng `extract_info_robust`.
+  - Vượt qua thành công cơ chế BotGuard của YouTube trên các cụm máy chủ đám mây (Render / AWS) ngay cả khi không có proxy dân cư hay cookies đăng nhập.
+
+---
+
 ## [2.3.1] — 2026-10-08
 
 ### [Added]

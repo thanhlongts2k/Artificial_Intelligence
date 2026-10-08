@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>YouTube Downloader - Tải Video Siêu Tốc</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ app_version }}">
     <!-- PWA Configuration -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f0f0f">
@@ -189,10 +189,10 @@
         </main>
 
         <footer class="app-footer">
-            <span class="app-version-badge" title="TubeX Phiên bản {{ app_version }}">
+            <div class="version-chip" title="Phiên bản YT Downloader v{{ app_version }}">
                 <span class="version-dot"></span>
-                <span>TubeX {{ app_version }}</span>
-            </span>
+                <span class="version-text">YT Downloader v{{ app_version }}</span>
+            </div>
         </footer>
     </div>
 
@@ -203,6 +203,6 @@
     </script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="{{ url_for('static', filename='main.js') }}?v=2.3.1"></script>
+    <script src="{{ url_for('static', filename='main.js') }}?v={{ app_version }}"></script>
 </body>
 </html>

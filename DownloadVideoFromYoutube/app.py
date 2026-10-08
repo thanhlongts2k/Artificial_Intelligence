@@ -112,8 +112,8 @@ def setup_ydl_opts(opts):
     if YOUTUBE_POT: yt_args['po_token'] = [YOUTUBE_POT]
     if YOUTUBE_VISITOR_DATA: yt_args['visitor_data'] = [YOUTUBE_VISITOR_DATA]
 
-    # Always ensure safe clients (android, visionos) that bypass Web botguard and sign-in errors
-    yt_args['player_client'] = ['android', 'visionos']
+    # Always ensure safe clients (android, visionos, tv_embedded) that bypass Web botguard and sign-in errors
+    yt_args['player_client'] = ['android', 'visionos', 'tv_embedded']
 
     if yt_args:
         base_opts.setdefault('extractor_args', {})['youtube'] = yt_args
@@ -134,36 +134,53 @@ def setup_ydl_opts(opts):
 def extract_info_robust(base_opts, url, download=False):
     """
     Trích xuất info video đa tầng (Multi-tier resilient extraction).
-    Tự động thử các bộ client an toàn (android, visionos) và fallback nếu gặp lỗi
-    'Sign in to confirm you're not a bot' từ IP Datacenter hoặc Cookie hết hạn.
+    Tự động thử các bộ client an toàn (android, visionos, tv_embedded, android_creator)
+    và fallback nếu gặp lỗi 'Sign in to confirm you're not a bot' từ IP Datacenter hoặc Cookie hết hạn.
     Đồng thời tự động loại bỏ proxy và fallback sang kết nối trực tiếp nếu proxy
     bị chết / trả về lỗi 402 Payment Required / 407 Proxy Auth / Tunnel connection failed.
     """
     has_proxy = 'proxy' in base_opts
     opts_no_proxy = {k: v for k, v in base_opts.items() if k != 'proxy'}
 
+    def make_tier(opts_dict, clients, drop_cookie=False):
+        t = {k: v for k, v in opts_dict.items() if (k != 'cookiefile' if drop_cookie else True)}
+        ext_args = t.get('extractor_args', {}).copy()
+        yt_args = ext_args.get('youtube', {}).copy()
+        yt_args['player_client'] = clients
+        ext_args['youtube'] = yt_args
+        t['extractor_args'] = ext_args
+        return t
+
     tier_groups = []
     # Nhóm 1: Thử với cấu hình gốc (kèm proxy nếu được cấu hình)
     tier_groups.append([
-        # Tier 1: Cấu hình chuẩn với android + visionos
-        base_opts,
-        # Tier 2: Loại bỏ cookiefile (tránh cookie bị expire/flagged trên cloud) + android & visionos
-        {**{k: v for k, v in base_opts.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['android', 'visionos']}}},
-        # Tier 3: Pure visionos không cookiefile
-        {**{k: v for k, v in base_opts.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['visionos']}}},
-        # Tier 4: Pure android không cookiefile
-        {**{k: v for k, v in base_opts.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['android']}}},
+        # Tier 1: Cấu hình chuẩn với android + visionos + tv_embedded
+        make_tier(base_opts, ['android', 'visionos', 'tv_embedded']),
+        # Tier 2: Vượt rào Datacenter với tv_embedded + android_creator
+        make_tier(base_opts, ['tv_embedded', 'android_creator']),
+        # Tier 3: Bỏ cookiefile + tv_embedded
+        make_tier(base_opts, ['tv_embedded'], drop_cookie=True),
+        # Tier 4: Bỏ cookiefile + android_creator
+        make_tier(base_opts, ['android_creator'], drop_cookie=True),
+        # Tier 5: Pure visionos không cookiefile
+        make_tier(base_opts, ['visionos'], drop_cookie=True),
+        # Tier 6: Pure android không cookiefile
+        make_tier(base_opts, ['android'], drop_cookie=True),
     ])
 
     # Nhóm 2: Fallback trực tiếp không qua proxy (Direct Connection) nếu nhóm 1 có proxy và proxy bị lỗi
     if has_proxy:
         tier_groups.append([
-            # Tier Direct 1: Bỏ proxy, giữ nguyên android + visionos
-            opts_no_proxy,
-            # Tier Direct 2: Bỏ proxy + bỏ cookiefile
-            {**{k: v for k, v in opts_no_proxy.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['android', 'visionos']}}},
-            # Tier Direct 3: Bỏ proxy + pure visionos
-            {**{k: v for k, v in opts_no_proxy.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['visionos']}}},
+            # Tier Direct 1: Bỏ proxy + android + visionos + tv_embedded
+            make_tier(opts_no_proxy, ['android', 'visionos', 'tv_embedded']),
+            # Tier Direct 2: Bỏ proxy + tv_embedded & android_creator (Bypass Datacenter IP BotGuard)
+            make_tier(opts_no_proxy, ['tv_embedded', 'android_creator']),
+            # Tier Direct 3: Bỏ proxy + bỏ cookiefile + tv_embedded
+            make_tier(opts_no_proxy, ['tv_embedded'], drop_cookie=True),
+            # Tier Direct 4: Bỏ proxy + bỏ cookiefile + android_creator
+            make_tier(opts_no_proxy, ['android_creator'], drop_cookie=True),
+            # Tier Direct 5: Bỏ proxy + pure visionos
+            make_tier(opts_no_proxy, ['visionos'], drop_cookie=True),
         ])
 
     last_err = None
@@ -294,7 +311,7 @@ def search_videos():
         'results': results
     })
 
-APP_VERSION = "v2.3.1"
+APP_VERSION = "2.3.2"
 
 @app.route('/')
 def home():
