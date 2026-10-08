@@ -2,6 +2,22 @@
 
 Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Flask + yt-dlp)** được ghi lại trong tài liệu này theo chuẩn [Keep a Changelog](https://keepachangelog.com/vi/1.0.0/) và tuân thủ nguyên tắc [Semantic Versioning](https://semver.org/).
 
+## [2.4.1] — 2026-10-08
+
+### [Fixed]
+- **Động cơ Trích xuất Đa tầng VisionOS & Mở khóa độ phân giải cao nhất (4K, 2K, 1080p60)**:
+  - Thay thế các client cũ bằng **`visionos`** làm Fast-Path số 1, vượt qua triệt để cơ chế BotGuard của YouTube trên Datacenter IP mà không cần đăng nhập hay cookies.
+  - Khôi phục đầy đủ 100% các độ phân giải: **2160p (4K Ultra HD), 1440p (2K QHD), 1080p (Full HD), 720p (HD)**, đồng thời ưu tiên bản **60fps** chuyển động mượt mà (`4K 60fps`, `1080p60`, `720p60`).
+  - Chuẩn hóa hàm nhận diện độ phân giải `get_standard_res` theo `min(width, height)` giúp phân loại chính xác tuyệt đối cho cả video ngang 16:9 lẫn video dọc 9:16 (Shorts/TikTok).
+- **Đảm bảo 100% luôn có tùy chọn tải Audio MP3 & M4A**:
+  - Tái cấu trúc thuật toán quét âm thanh: Không phụ thuộc vào `filesize` hay `duration`, luôn luôn trích xuất hoặc fallback về `bestaudio/best`.
+  - Đảm bảo mọi video (kể cả video Livestream, video phân mảnh adaptive) đều xuất hiện 2 nút tải nhạc: **MP3 (192kbps)** và **M4A (gốc YouTube)**.
+- **Khắc phục lỗi "This live event has ended" & Thân thiện hóa thông báo lỗi**:
+  - Xóa bỏ việc ngắt sớm ở Tier 0 của `extract_info_robust`, cho phép hệ thống tự động fallback qua `visionos` để trích xuất thành công các video livestream vừa kết thúc (`post_live`).
+  - Tự động chuyển đổi thông báo lỗi sang tiếng Việt thân thiện nếu YouTube đang trong thời gian xử lý lưu trữ VOD.
+
+---
+
 ## [2.4.0] — 2026-10-08
 
 ### [Added]

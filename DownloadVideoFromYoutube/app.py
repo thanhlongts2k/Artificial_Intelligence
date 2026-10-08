@@ -113,7 +113,7 @@ def setup_ydl_opts(opts):
     if YOUTUBE_VISITOR_DATA: yt_args['visitor_data'] = [YOUTUBE_VISITOR_DATA]
 
     # Always ensure safe fast clients that bypass Web botguard and sign-in errors
-    yt_args['player_client'] = ['tv_embedded', 'android_creator']
+    yt_args['player_client'] = ['visionos', 'android']
 
     if yt_args:
         base_opts.setdefault('extractor_args', {})['youtube'] = yt_args
@@ -158,33 +158,31 @@ def extract_info_robust(base_opts, url, download=False):
     tier_groups = []
     # Nhóm 1: Thử với cấu hình gốc (kèm proxy nếu được cấu hình)
     tier_groups.append([
-        # Tier 1 (Fast-Path Siêu Tốc ~1.3s): tv_embedded độc lập, miễn nhiễm Datacenter BotGuard
-        make_tier(base_opts, ['tv_embedded']),
-        # Tier 2 (Dự phòng nhanh ~1.3s): android_creator độc lập
-        make_tier(base_opts, ['android_creator']),
-        # Tier 3: android_embedded
-        make_tier(base_opts, ['android_embedded']),
-        # Tier 4: tv_embedded bỏ cookie (tránh cookie bị expire/flagged trên cloud)
-        make_tier(base_opts, ['tv_embedded'], drop_cookie=True),
-        # Tier 5: android_creator bỏ cookie
-        make_tier(base_opts, ['android_creator'], drop_cookie=True),
-        # Tier 6: composite android & visionos
-        make_tier(base_opts, ['android', 'visionos'], drop_cookie=True),
+        # Tier 1 (Fast-Path Đa Năng ~1.2s): visionos độc lập - hỗ trợ 144p tới 4K 60fps, post-live, miễn nhiễm Datacenter BotGuard
+        make_tier(base_opts, ['visionos']),
+        # Tier 2 (Dự phòng kết hợp): visionos kết hợp android
+        make_tier(base_opts, ['visionos', 'android']),
+        # Tier 3: visionos kết hợp web
+        make_tier(base_opts, ['visionos', 'web']),
+        # Tier 4: android độc lập
+        make_tier(base_opts, ['android']),
+        # Tier 5: visionos bỏ cookie (tránh cookie bị expire/flagged trên cloud)
+        make_tier(base_opts, ['visionos'], drop_cookie=True),
+        # Tier 6: visionos kết hợp android bỏ cookie
+        make_tier(base_opts, ['visionos', 'android'], drop_cookie=True),
     ])
 
     # Nhóm 2: Fallback trực tiếp không qua proxy (Direct Connection) nếu nhóm 1 có proxy và proxy bị lỗi
     if has_proxy:
         tier_groups.append([
-            # Tier Direct 1: Bỏ proxy + tv_embedded siêu tốc
-            make_tier(opts_no_proxy, ['tv_embedded']),
-            # Tier Direct 2: Bỏ proxy + android_creator
-            make_tier(opts_no_proxy, ['android_creator']),
-            # Tier Direct 3: Bỏ proxy + android_embedded
-            make_tier(opts_no_proxy, ['android_embedded']),
-            # Tier Direct 4: Bỏ proxy + bỏ cookiefile + tv_embedded
-            make_tier(opts_no_proxy, ['tv_embedded'], drop_cookie=True),
-            # Tier Direct 5: Bỏ proxy + bỏ cookiefile + android_creator
-            make_tier(opts_no_proxy, ['android_creator'], drop_cookie=True),
+            # Tier Direct 1: Bỏ proxy + visionos siêu tốc
+            make_tier(opts_no_proxy, ['visionos']),
+            # Tier Direct 2: Bỏ proxy + visionos kết hợp android
+            make_tier(opts_no_proxy, ['visionos', 'android']),
+            # Tier Direct 3: Bỏ proxy + bỏ cookiefile + visionos
+            make_tier(opts_no_proxy, ['visionos'], drop_cookie=True),
+            # Tier Direct 4: Bỏ proxy + android
+            make_tier(opts_no_proxy, ['android']),
         ])
 
     last_err = None
@@ -201,7 +199,8 @@ def extract_info_robust(base_opts, url, download=False):
                 is_recoverable = is_proxy_failure or any(k in err_str for k in [
                     'sign in', 'bot', 'confirm', 'requested format is not available', 
                     'not available', 'login', 'failed to extract any player response', 
-                    'player response', 'player_response', 'unable to extract', 'timed out', 'timeout'
+                    'player response', 'player_response', 'unable to extract', 'timed out', 'timeout',
+                    'this live event has ended', 'live event', 'live stream'
                 ])
 
                 # Nếu là lỗi do Proxy và đang ở nhóm có proxy, lập tức nhảy qua nhóm Direct connection
@@ -209,8 +208,6 @@ def extract_info_robust(base_opts, url, download=False):
                     logging.warning(f"[!] Proxy extraction failed ({str(e)[:80]}). Chuyển ngay sang nhóm Fallback Direct Connection...")
                     break
 
-                if not is_recoverable and i == 0 and not has_proxy:
-                    raise e
                 logging.warning(f"[!] Extraction tier {i+1} failed ({str(e)[:80]}). Retrying next tier...")
     raise last_err
 
@@ -319,7 +316,7 @@ def search_videos():
         'results': results
     })
 
-APP_VERSION = "2.4.0"
+APP_VERSION = "2.4.1"
 
 @app.route('/')
 def home():
@@ -364,39 +361,52 @@ def get_info():
             144: 120,
         }
 
-        # 1. Tìm audio stream tốt nhất để cộng dồn dung lượng video
+        # 1. Tìm audio stream tốt nhất để cộng dồn dung lượng video và tạo tùy chọn tải âm thanh
         best_audio_size = 0
         best_audio_id = None
+        best_abr = 0
         for f in info.get('formats', []):
-            if f.get('vcodec') == 'none' and f.get('acodec') != 'none':
+            if f.get('vcodec') == 'none':
                 abr = f.get('abr') or f.get('tbr') or 0
                 size = f.get('filesize') or f.get('filesize_approx')
                 if not size and abr and duration:
                     size = int((abr * 1000 / 8) * duration)
-                if size and size > best_audio_size:
-                    best_audio_size = size
+                if not best_audio_id or (abr and abr > best_abr) or (size and size > best_audio_size):
                     best_audio_id = f.get('format_id')
+                    if abr: best_abr = abr
+                    if size: best_audio_size = size
+        
+        # Nếu chưa tìm thấy audio-only stream (vd: video chỉ có luồng gộp muxed), lấy format có audio bất kỳ
+        if not best_audio_id:
+            for f in info.get('formats', []):
+                if f.get('acodec') and f.get('acodec') != 'none':
+                    best_audio_id = f.get('format_id')
+                    break
+        
+        if not best_audio_id:
+            best_audio_id = 'bestaudio/best'
         
         if not best_audio_size and duration:
             best_audio_size = int((128 * 1000 / 8) * duration)
 
         def get_standard_res(width, height, format_note=''):
-            w = width or 0
-            h = height or 0
             if format_note and 'p' in format_note:
                 m = re.search(r'(\d+)p', format_note)
                 if m:
                     val = int(m.group(1))
                     if val in [2160, 1440, 1080, 720, 480, 360, 240, 144]:
                         return val
-            if w >= 3800 or h >= 2100: return 2160
-            if w >= 2500 or h >= 1400: return 1440
-            if w >= 1900 or h >= 950: return 1080
-            if w >= 1200 or h >= 650: return 720
-            if w >= 800 or h >= 400: return 480
-            if w >= 600 or h >= 300: return 360
-            if w >= 400 or h >= 200: return 240
-            return h
+            # Chuẩn hóa theo cạnh ngắn nhất min(w, h) cho cả video ngang (16:9) và video dọc (9:16 Shorts)
+            dim = min(width or 0, height or 0) if (width and height) else (height or width or 0)
+            if dim >= 2100: return 2160
+            if dim >= 1400: return 1440
+            if dim >= 950:  return 1080
+            if dim >= 650:  return 720
+            if dim >= 400:  return 480
+            if dim >= 300:  return 360
+            if dim >= 200:  return 240
+            if dim > 0:     return 144
+            return height or 0
 
         # 2. Gom nhóm video format theo standard resolution
         res_map = {}
@@ -405,7 +415,7 @@ def get_info():
             height = f.get('height')
             width = f.get('width')
             format_note = f.get('format_note') or ''
-            if not vcodec or vcodec == 'none' or not height:
+            if not vcodec or vcodec == 'none' or not (height or width):
                 continue
 
             std_res = get_standard_res(width, height, format_note)
@@ -421,13 +431,22 @@ def get_info():
             is_video_only = (f.get('acodec') == 'none')
             final_size = (raw_size + best_audio_size) if (raw_size and is_video_only) else raw_size
 
-            # Điểm ưu tiên: mp4, codec avc1, có size rõ ràng
+            fps = f.get('fps') or 0
             score = 0
+            # Điểm ưu tiên FPS cao (60fps cho chuyển động mượt mà)
+            if fps >= 50: score += 15
+            elif fps > 30: score += 8
+
             if f.get('ext') == 'mp4': score += 10
-            if str(vcodec).startswith('avc'): score += 15
+            if str(vcodec).startswith('avc'): score += 10
+            elif str(vcodec).startswith('vp09') or str(vcodec).startswith('vp9'): score += 8
+            elif str(vcodec).startswith('av01'): score += 6
+
             if f.get('filesize'): score += 20
             elif f.get('filesize_approx'): score += 10
             elif raw_size: score += 5
+
+            if vbr: score += min(int(vbr / 1000), 10)
 
             current = res_map.get(std_res)
             if not current or score > current['score']:
@@ -437,16 +456,23 @@ def get_info():
                 elif std_res >= 1080: badge = "Full HD"
                 elif std_res >= 720: badge = "HD"
 
+                if fps >= 50 and badge:
+                    badge += " 60fps"
+                elif fps >= 50:
+                    badge = "60fps"
+
+                res_label = f"{std_res}p60" if fps >= 50 else f"{std_res}p"
+
                 res_map[std_res] = {
                     'format_id': f.get('format_id'),
                     'ext': 'mp4',
                     'resolution': f"{std_res}p",
-                    'res_label': f"{std_res}p",
+                    'res_label': res_label,
                     'quality_badge': badge,
                     'filesize': final_size,
-                    'filesize_formatted': format_bytes(final_size),
+                    'filesize_formatted': format_bytes(final_size) if final_size else "Tối ưu stream",
                     'is_approx': is_approx,
-                    'fps': f.get('fps'),
+                    'fps': fps,
                     'height': std_res,
                     'type': 'video',
                     'score': score
@@ -455,37 +481,35 @@ def get_info():
         formats = sorted(res_map.values(), key=lambda x: x['height'], reverse=True)
         for f in formats: f.pop('score', None)
 
-        # 3. Thêm tùy chọn Tải Âm thanh (Audio MP3 & M4A)
-        if best_audio_id:
-            # Tính toán chuẩn dung lượng file MP3 192kbps sau khi FFmpeg transcode
-            mp3_size = int((192 * 1000 / 8) * duration) if duration else int(best_audio_size * 1.38)
-            formats.append({
-                'format_id': best_audio_id,
-                'ext': 'mp3',
-                'resolution': 'Audio (MP3)',
-                'res_label': 'Chỉ Âm thanh (Audio MP3 - 192kbps)',
-                'quality_badge': 'HQ MP3',
-                'filesize': mp3_size,
-                'filesize_formatted': format_bytes(mp3_size),
-                'is_approx': False,
-                'fps': None,
-                'height': 0,
-                'type': 'audio'
-            })
-            # Tùy chọn M4A (Âm thanh AAC gốc từ YouTube, tải siêu tốc không cần nén lại)
-            formats.append({
-                'format_id': best_audio_id,
-                'ext': 'm4a',
-                'resolution': 'Audio (M4A)',
-                'res_label': 'Âm thanh Gốc YouTube (M4A - Tải Siêu Nhanh)',
-                'quality_badge': 'Fast M4A',
-                'filesize': best_audio_size,
-                'filesize_formatted': format_bytes(best_audio_size),
-                'is_approx': False,
-                'fps': None,
-                'height': -1,
-                'type': 'audio'
-            })
+        # 3. LUÔN LUÔN Thêm tùy chọn Tải Âm thanh (Audio MP3 & M4A) cho mọi video
+        mp3_size = int((192 * 1000 / 8) * duration) if duration else (int(best_audio_size * 1.38) if best_audio_size else 0)
+        formats.append({
+            'format_id': best_audio_id or 'bestaudio',
+            'ext': 'mp3',
+            'resolution': 'Audio (MP3)',
+            'res_label': 'Chỉ Âm thanh (Audio MP3 - 192kbps)',
+            'quality_badge': 'HQ MP3',
+            'filesize': mp3_size,
+            'filesize_formatted': format_bytes(mp3_size) if mp3_size else "Tối ưu stream",
+            'is_approx': bool(mp3_size),
+            'fps': None,
+            'height': 0,
+            'type': 'audio'
+        })
+        m4a_size = best_audio_size if best_audio_size else (int((128 * 1000 / 8) * duration) if duration else 0)
+        formats.append({
+            'format_id': best_audio_id or 'bestaudio',
+            'ext': 'm4a',
+            'resolution': 'Audio (M4A)',
+            'res_label': 'Âm thanh Gốc YouTube (M4A - Tải Siêu Nhanh)',
+            'quality_badge': 'Fast M4A',
+            'filesize': m4a_size,
+            'filesize_formatted': format_bytes(m4a_size) if m4a_size else "Tối ưu stream",
+            'is_approx': bool(m4a_size),
+            'fps': None,
+            'height': -1,
+            'type': 'audio'
+        })
 
         # Pre-cache stream info for immediate zero-delay playback
         active_proxy = request.args.get('proxy') or YOUTUBE_PROXY
@@ -513,7 +537,11 @@ def get_info():
             'formats': formats
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        err_msg = str(e)
+        if 'live event has ended' in err_msg.lower():
+            friendly_err = "Luồng phát trực tiếp này vừa kết thúc. YouTube đang xử lý lại bản lưu (VOD), vui lòng thử lại sau vài phút!"
+            return jsonify({'error': friendly_err}), 400
+        return jsonify({'error': f"Lỗi trích xuất: {err_msg}"}), 500
 
 @app.route('/api/debug')
 def debug_info():

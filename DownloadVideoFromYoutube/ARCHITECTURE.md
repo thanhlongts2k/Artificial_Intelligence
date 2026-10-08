@@ -11,7 +11,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │               CLIENT LAYER (Progressive Web App)                │
 │   - HTML5 / CSS3 Dark Glassmorphism                             │
-│   - Service Worker (sw.js - Cache v2.4.0, Offline App Shell)   │
+│   - Service Worker (sw.js - Cache v2.4.1, Offline App Shell)   │
 │   - Web MediaSession API (Lock Screen, Dynamic Island, Scrubber)│
 │   - Screen WakeLock API & Picture-in-Picture (PiP)              │
 │   - LocalStorage Caching (Playback speed, Proxy config)         │
