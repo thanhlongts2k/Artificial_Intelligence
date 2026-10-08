@@ -118,8 +118,8 @@ def setup_ydl_opts(opts):
     if yt_args:
         base_opts.setdefault('extractor_args', {})['youtube'] = yt_args
 
-    # Short socket timeout to prevent long hanging spinners
-    base_opts.setdefault('socket_timeout', 10)
+    # Short socket timeout to prevent long hanging spinners and avoid Gunicorn worker timeouts
+    base_opts.setdefault('socket_timeout', 6)
 
     # Proxy Logic
     proxy = YOUTUBE_PROXY
@@ -137,7 +137,7 @@ def setup_ydl_opts(opts):
 def extract_info_robust(base_opts, url, download=False):
     """
     Trích xuất info video đa tầng siêu tốc (Multi-tier ultra-fast resilient extraction).
-    Ưu tiên Fast-Path (tv_embedded, android_creator) hoàn thành chỉ trong ~1.3s và miễn nhiễm
+    Ưu tiên Fast-Path (visionos guest mode) hoàn thành chỉ trong ~1.2s và miễn nhiễm
     hoàn toàn với cơ chế chặn BotGuard trên IP Datacenter (Render / AWS).
     Đồng thời tự động loại bỏ proxy và fallback sang kết nối trực tiếp nếu proxy
     bị chết / trả về lỗi 402 Payment Required / 407 Proxy Auth / Tunnel connection failed.
@@ -152,35 +152,33 @@ def extract_info_robust(base_opts, url, download=False):
         yt_args['player_client'] = clients
         ext_args['youtube'] = yt_args
         t['extractor_args'] = ext_args
-        t.setdefault('socket_timeout', 10)
+        t.setdefault('socket_timeout', 6)
         return t
 
     tier_groups = []
     # Nhóm 1: Thử với cấu hình gốc (kèm proxy nếu được cấu hình)
     tier_groups.append([
-        # Tier 1 (Fast-Path Đa Năng ~1.2s): visionos độc lập - hỗ trợ 144p tới 4K 60fps, post-live, miễn nhiễm Datacenter BotGuard
-        make_tier(base_opts, ['visionos']),
-        # Tier 2 (Dự phòng kết hợp): visionos kết hợp android
-        make_tier(base_opts, ['visionos', 'android']),
-        # Tier 3: visionos kết hợp web
-        make_tier(base_opts, ['visionos', 'web']),
-        # Tier 4: android độc lập
-        make_tier(base_opts, ['android']),
-        # Tier 5: visionos bỏ cookie (tránh cookie bị expire/flagged trên cloud)
+        # Tier 1 (Fast-Path Siêu Tốc ~1.2s): visionos độc lập không cookie - 4K 60fps, post-live, miễn nhiễm Datacenter BotGuard
         make_tier(base_opts, ['visionos'], drop_cookie=True),
-        # Tier 6: visionos kết hợp android bỏ cookie
+        # Tier 2 (Dự phòng kết hợp không cookie): visionos kết hợp android
         make_tier(base_opts, ['visionos', 'android'], drop_cookie=True),
+        # Tier 3 (Kèm cookie nếu video yêu cầu xác thực / giới hạn tuổi): visionos
+        make_tier(base_opts, ['visionos']),
+        # Tier 4: visionos kết hợp web kèm cookie
+        make_tier(base_opts, ['visionos', 'web']),
+        # Tier 5: android độc lập
+        make_tier(base_opts, ['android']),
     ])
 
     # Nhóm 2: Fallback trực tiếp không qua proxy (Direct Connection) nếu nhóm 1 có proxy và proxy bị lỗi
     if has_proxy:
         tier_groups.append([
-            # Tier Direct 1: Bỏ proxy + visionos siêu tốc
-            make_tier(opts_no_proxy, ['visionos']),
-            # Tier Direct 2: Bỏ proxy + visionos kết hợp android
-            make_tier(opts_no_proxy, ['visionos', 'android']),
-            # Tier Direct 3: Bỏ proxy + bỏ cookiefile + visionos
+            # Tier Direct 1: Bỏ proxy + visionos siêu tốc không cookie
             make_tier(opts_no_proxy, ['visionos'], drop_cookie=True),
+            # Tier Direct 2: Bỏ proxy + visionos kết hợp android không cookie
+            make_tier(opts_no_proxy, ['visionos', 'android'], drop_cookie=True),
+            # Tier Direct 3: Bỏ proxy + visionos kèm cookie
+            make_tier(opts_no_proxy, ['visionos']),
             # Tier Direct 4: Bỏ proxy + android
             make_tier(opts_no_proxy, ['android']),
         ])
@@ -293,7 +291,11 @@ def search_videos():
     for entry in entries:
         if not entry or not entry.get('id'):
             continue
-        video_id = entry.get('id')
+        video_id = str(entry.get('id'))
+        # Chỉ giữ video thực thụ (ID chuẩn 11 ký tự), lọc bỏ Kênh (ID bắt đầu bằng UC, 24 ký tự) và Tab/Playlist
+        if len(video_id) != 11 or video_id.startswith('UC') or entry.get('ie_key') in ['YoutubeTab', 'YoutubeChannel']:
+            continue
+
         duration = entry.get('duration') or 0
         thumbs = entry.get('thumbnails') or []
         thumb_url = thumbs[-1].get('url') if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
@@ -316,7 +318,7 @@ def search_videos():
         'results': results
     })
 
-APP_VERSION = "2.4.1"
+APP_VERSION = "2.4.2"
 
 @app.route('/')
 def home():
@@ -338,6 +340,8 @@ def get_info():
     url = request.args.get('url')
     if not url: return jsonify({'error': 'URL is required'}), 400
     url = clean_youtube_url(url)
+    if 'channel/' in url or '/c/' in url or '/@' in url or 'watch?v=UC' in url:
+        return jsonify({'error': 'Liên kết bạn nhập là Kênh YouTube chứ không phải Video. Vui lòng chọn một video cụ thể!'}), 400
     
     ydl_opts = setup_ydl_opts({
         'quiet': True,

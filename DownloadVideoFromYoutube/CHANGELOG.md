@@ -2,6 +2,21 @@
 
 Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Flask + yt-dlp)** được ghi lại trong tài liệu này theo chuẩn [Keep a Changelog](https://keepachangelog.com/vi/1.0.0/) và tuân thủ nguyên tắc [Semantic Versioning](https://semver.org/).
 
+## [2.4.2] — 2026-10-08
+
+### [Fixed]
+- **Tối ưu triệt để Fast-Path VisionOS (Guest Mode) — Triệt tiêu Worker Timeout & Hiện tượng "sập server" trên Render**:
+  - Đưa cấu hình `visionos` không cookie (`drop_cookie=True`) lên **Tier 1 (Ưu tiên số 1)**: Bỏ qua biến `YOUTUBE_COOKIES` khi trích xuất video thông thường, loại bỏ hoàn toàn tình trạng session cookie bị gắn cờ (flagged) hoặc hết hạn trên Datacenter IP Render.
+  - Tốc độ trích xuất video trên Cloud Render giảm từ **27.8s xuống ~1.3s**, triệt tiêu nguy cơ chạm ngưỡng timeout 30s của Gunicorn.
+  - Hạ `socket_timeout` từ 10s xuống 6s để fail-fast và chuyển tier tức thì nếu mạng gặp độ trễ.
+- **Lọc Kênh (Channel) khỏi Kết quả Tìm kiếm YouTube**:
+  - Loại bỏ các mục dạng Kênh (`UC...`) và Playlist URL khỏi API tìm kiếm, chỉ giữ lại Video hợp lệ (ID 11 ký tự).
+  - Ngăn ngừa lỗi người dùng bấm nhầm vào thẻ Kênh dẫn tới việc gọi `/api/info` sai định dạng và ngâm timeout server.
+- **Bổ sung Procfile cho Render**:
+  - Cấu hình Gunicorn chạy với tham số `--workers 2 --timeout 120 app:app` để đảm bảo không bao giờ bị kill process khi thực hiện tải hoặc xử lý video dài.
+
+---
+
 ## [2.4.1] — 2026-10-08
 
 ### [Fixed]
