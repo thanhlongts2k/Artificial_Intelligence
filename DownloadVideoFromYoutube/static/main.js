@@ -33,6 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const seekBackBtn = document.getElementById('seekBackBtn');
     const seekForwardBtn = document.getElementById('seekForwardBtn');
     const playerStatusText = document.getElementById('playerStatusText');
+    const speedBtn = document.getElementById('speedBtn');
+    const speedLabel = document.getElementById('speedLabel');
+    const SPEED_STEPS = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    let currentPlaybackRate = parseFloat(localStorage.getItem('tubex_playback_rate')) || 1.0;
+
+    // ===== YouTube Search Elements =====
+    const searchResultsSection = document.getElementById('searchResultsSection');
+    const searchResultsList = document.getElementById('searchResultsList');
+    const searchKeywordBadge = document.getElementById('searchKeywordBadge');
+    const searchCountBadge = document.getElementById('searchCountBadge');
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
+    const loadingText = document.getElementById('loadingText');
 
     // ===== PWA Install & Service Worker Management =====
     const pwaInstallBtn = document.getElementById('pwaInstallBtn');
@@ -145,15 +157,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    analyzeBtn.addEventListener('click', async () => {
-        const url = videoUrlInput.value.trim();
-        if (!url) {
-            showError('Vui lòng nhập link YouTube!');
+    // ===== Input Detection & YouTube Search Logic =====
+    function isYouTubeUrl(str) {
+        if (!str) return false;
+        const trimmed = str.trim();
+        return /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtu\.be)\//i.test(trimmed);
+    }
+
+    async function handleUrlOrSearchSubmit() {
+        const inputVal = videoUrlInput.value.trim();
+        if (!inputVal) {
+            showError('Vui lòng nhập link YouTube hoặc từ khóa tìm kiếm!');
             return;
         }
 
+        if (isYouTubeUrl(inputVal)) {
+            if (searchResultsSection) searchResultsSection.style.display = 'none';
+            await fetchVideoInfo(inputVal);
+        } else {
+            await performSearch(inputVal);
+        }
+    }
+
+    analyzeBtn.addEventListener('click', handleUrlOrSearchSubmit);
+
+    videoUrlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleUrlOrSearchSubmit();
+        }
+    });
+
+    if (closeSearchBtn) {
+        closeSearchBtn.addEventListener('click', () => {
+            if (searchResultsSection) searchResultsSection.style.display = 'none';
+        });
+    }
+
+    async function fetchVideoInfo(url, autoPlayBg = false) {
         resetUI();
         loading.style.display = 'block';
+        if (loadingText) loadingText.textContent = 'Đang phân tích video...';
         analyzeBtn.disabled = true;
 
         try {
@@ -178,6 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             displayVideoInfo(data, url);
+
+            if (autoPlayBg) {
+                setTimeout(() => {
+                    startStreamPlayback('video');
+                }, 200);
+            }
         } catch (error) {
             console.error("Fetch error:", error);
             showError('Lỗi kết nối: Không thể liên lạc với Server. Hãy thử tải lại trang hoặc kiểm tra Log trên Render.');
@@ -185,7 +235,126 @@ document.addEventListener('DOMContentLoaded', () => {
             loading.style.display = 'none';
             analyzeBtn.disabled = false;
         }
-    });
+    }
+
+    async function performSearch(query) {
+        errorMsg.style.display = 'none';
+        resultContainer.style.display = 'none';
+        loading.style.display = 'block';
+        if (loadingText) loadingText.textContent = `Đang tìm kiếm "${query}" trên YouTube...`;
+        analyzeBtn.disabled = true;
+
+        try {
+            const proxy = proxyUrlInput.value.trim();
+            let searchUrl = `/api/search?q=${encodeURIComponent(query)}&limit=10`;
+            if (proxy) searchUrl += `&proxy=${encodeURIComponent(proxy)}`;
+
+            const res = await fetch(searchUrl);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: "Lỗi tìm kiếm server" }));
+                showError(err.error || "Không thể tìm kiếm video");
+                return;
+            }
+
+            const data = await res.json();
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+
+            if (!data.results || data.results.length === 0) {
+                showError(`Không tìm thấy video nào phù hợp với từ khóa "${query}".`);
+                return;
+            }
+
+            renderSearchResults(data);
+        } catch (e) {
+            console.error('[Search Error]', e);
+            showError('Lỗi kết nối khi tìm kiếm YouTube. Vui lòng thử lại!');
+        } finally {
+            loading.style.display = 'none';
+            analyzeBtn.disabled = false;
+        }
+    }
+
+    function renderSearchResults(data) {
+        if (!searchResultsSection || !searchResultsList) return;
+
+        if (searchKeywordBadge) searchKeywordBadge.textContent = `"${data.query}"`;
+        if (searchCountBadge) searchCountBadge.textContent = `${data.count} video`;
+        searchResultsList.innerHTML = '';
+
+        data.results.forEach(video => {
+            const card = document.createElement('div');
+            card.className = 'search-card';
+
+            card.innerHTML = `
+                <div class="search-card-thumb-wrap">
+                    <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy">
+                    ${video.duration_formatted ? `<span class="search-card-duration">${video.duration_formatted}</span>` : ''}
+                </div>
+                <div class="search-card-body">
+                    <h4 class="search-card-title" title="${escapeHtml(video.title)}">${escapeHtml(video.title)}</h4>
+                    <div class="search-card-meta">
+                        <span class="search-card-uploader">${escapeHtml(video.uploader)}</span>
+                        ${video.view_count_formatted ? `<span class="search-card-views">👁️ ${video.view_count_formatted}</span>` : ''}
+                    </div>
+                    <div class="search-card-actions">
+                        <button class="btn-card-action btn-card-play" type="button" title="Phát ngay video này">
+                            ▶ Nghe ngay
+                        </button>
+                        <button class="btn-card-action btn-card-download" type="button" title="Xem chi tiết các định dạng tải">
+                            ⬇ Tải về
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Sự kiện nút Play ngay
+            const playBtn = card.querySelector('.btn-card-play');
+            if (playBtn) {
+                playBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    videoUrlInput.value = video.url;
+                    searchResultsSection.style.display = 'none';
+                    fetchVideoInfo(video.url, true);
+                });
+            }
+
+            // Sự kiện nút Download
+            const dlBtn = card.querySelector('.btn-card-download');
+            if (dlBtn) {
+                dlBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    videoUrlInput.value = video.url;
+                    searchResultsSection.style.display = 'none';
+                    fetchVideoInfo(video.url, false);
+                });
+            }
+
+            // Nhấp vào thân thẻ để nghe ngay
+            card.addEventListener('click', () => {
+                videoUrlInput.value = video.url;
+                searchResultsSection.style.display = 'none';
+                fetchVideoInfo(video.url, true);
+            });
+
+            searchResultsList.appendChild(card);
+        });
+
+        searchResultsSection.style.display = 'block';
+        searchResultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
     function displayVideoInfo(data, originalUrl) {
         currentVideoData = data;
@@ -366,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetUI() {
         errorMsg.style.display = 'none';
         resultContainer.style.display = 'none';
+        if (searchResultsSection) searchResultsSection.style.display = 'none';
         resetPlayer();
     }
 
@@ -459,7 +629,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     safeSetCurrentTime(active, 0);
                     updatePlayButtonsState(false);
                 });
-            } catch (e) {}
+            } catch (e) {
+                console.warn('[MediaSession Stop Action]', e);
+            }
         }
     }
 
@@ -475,7 +647,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const onReady = () => {
                 try {
                     player.currentTime = targetTime;
-                } catch (e) {}
+                } catch (e) {
+                    console.warn('[Seek on Ready failed]', e);
+                }
                 player.removeEventListener('loadedmetadata', onReady);
                 player.removeEventListener('canplay', onReady);
             };
@@ -530,6 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const playPromise = activePlayer.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
+                activePlayer.playbackRate = currentPlaybackRate;
                 updatePlayButtonsState(true);
                 setupMediaSession();
                 requestWakeLock();
@@ -651,12 +826,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             playbackRate: player.playbackRate || 1.0,
                             position: Math.min(current, total)
                         });
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('[MediaSession positionState failed]', e);
+                    }
                 }
             }
         });
 
         player.addEventListener('play', () => {
+            player.playbackRate = currentPlaybackRate;
             if (player === getActivePlayer()) updatePlayButtonsState(true);
         });
 
@@ -763,4 +941,26 @@ document.addEventListener('DOMContentLoaded', () => {
             analyzeBtn.click();
         }
     });
+
+    // ===== Playback Speed Controls =====
+    function applyPlaybackRate(rate) {
+        currentPlaybackRate = rate;
+        localStorage.setItem('tubex_playback_rate', rate);
+        if (speedLabel) speedLabel.textContent = rate + 'x';
+        if (bgVideoPlayer) bgVideoPlayer.playbackRate = rate;
+        if (bgAudioPlayer) bgAudioPlayer.playbackRate = rate;
+    }
+
+    if (speedBtn) {
+        speedBtn.addEventListener('click', () => {
+            const currentIndex = SPEED_STEPS.indexOf(currentPlaybackRate);
+            const nextIndex = (currentIndex >= 0 && currentIndex < SPEED_STEPS.length - 1) ? currentIndex + 1 : 0;
+            const nextRate = SPEED_STEPS[nextIndex];
+            applyPlaybackRate(nextRate);
+            showToast(`⚡ Tốc độ phát: ${nextRate}x`);
+        });
+    }
+
+    // Khởi tạo tốc độ phát ban đầu
+    applyPlaybackRate(currentPlaybackRate);
 });

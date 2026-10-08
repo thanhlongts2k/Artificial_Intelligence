@@ -189,6 +189,71 @@ def format_duration(seconds):
     h, m = divmod(m, 60)
     return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
+def format_views(count):
+    if not count:
+        return ""
+    try:
+        c = int(count)
+        if c >= 1_000_000:
+            return f"{c / 1_000_000:.1f}M lượt xem"
+        if c >= 1_000:
+            return f"{c / 1_000:.1f}K lượt xem"
+        return f"{c} lượt xem"
+    except (ValueError, TypeError):
+        return ""
+
+@app.route('/api/search')
+def search_videos():
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'error': 'Vui lòng nhập từ khóa tìm kiếm'}), 400
+    
+    limit = request.args.get('limit', 10, type=int)
+    limit = max(1, min(limit, 20))
+    
+    ydl_opts = setup_ydl_opts({
+        'extract_flat': True,
+        'skip_download': True,
+        'quiet': True,
+        'no_warnings': True,
+    })
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            search_target = f"ytsearch{limit}:{query}"
+            res = ydl.extract_info(search_target, download=False)
+            entries = res.get('entries', []) or []
+            
+            results = []
+            for entry in entries:
+                if not entry or not entry.get('id'):
+                    continue
+                video_id = entry.get('id')
+                duration = entry.get('duration') or 0
+                thumbs = entry.get('thumbnails') or []
+                thumb_url = thumbs[-1].get('url') if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                
+                results.append({
+                    'id': video_id,
+                    'title': entry.get('title') or 'Không có tiêu đề',
+                    'url': f"https://www.youtube.com/watch?v={video_id}",
+                    'uploader': entry.get('uploader') or entry.get('channel') or 'YouTube',
+                    'duration': duration,
+                    'duration_formatted': format_duration(duration),
+                    'thumbnail': thumb_url,
+                    'view_count': entry.get('view_count'),
+                    'view_count_formatted': format_views(entry.get('view_count')),
+                })
+            
+            return jsonify({
+                'query': query,
+                'count': len(results),
+                'results': results
+            })
+    except Exception as e:
+        logging.error(f'Lỗi tìm kiếm YouTube với từ khóa "{query}": {str(e)}')
+        return jsonify({'error': f"Lỗi tìm kiếm: {str(e)}"}), 500
+
 @app.route('/')
 def home():
     return render_template('index.html', host_ip=get_lan_ip())

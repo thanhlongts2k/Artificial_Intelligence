@@ -4,6 +4,26 @@ Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Fl
 
 ---
 
+## [2.3.0] — 2026-10-08
+
+### [Added]
+- **Nút điều chỉnh tốc độ phát thông minh (Playback Speed Control)**:
+  - Bổ sung nút chip `[1.0x]` ngay trên thanh điều khiển của trình phát, hỗ trợ xoay vòng các nấc tốc độ: `0.75x`, `1.0x`, `1.25x`, `1.5x`, `1.75x`, `2.0x`.
+  - Tự động áp dụng đồng bộ cho cả chế độ Xem Video & PiP lẫn Nghe ngầm tắt màn hình (Audio Mode).
+  - Tích hợp `localStorage` ghi nhớ tốc độ ưa thích, tự động áp dụng lại khi mở bài mới hoặc tải lại trang PWA.
+  - Đồng bộ `playbackRate` lên Media Session API giúp màn hình khóa iOS, Dynamic Island và thanh điều khiển Android hiển thị tốc độ chính xác.
+- **Tìm kiếm video trực tiếp từ YouTube (In-App YouTube Search)**:
+  - Tích hợp thuật toán phân loại đầu vào thông minh: tự động phân biệt giữa URL YouTube và từ khóa tìm kiếm (ví dụ: *"thời sự 19h"*, *"nhạc lofi"*).
+  - Endpoint mới `/api/search` khai thác cơ chế `extract_flat` của `yt-dlp` cho tốc độ phản hồi cực nhanh (~1.2s), không yêu cầu API Key của YouTube.
+  - Giao diện lưới kết quả tìm kiếm Dark Glassmorphism trực quan: hiển thị ảnh bìa, badge thời lượng, tiêu đề, tên kênh và số lượt xem.
+  - Hỗ trợ 2 nút hành động nhanh trên mỗi thẻ: **`▶ Nghe ngay`** (nạp và phát ngầm tức thì) và **`⬇ Tải về`** (xem danh sách định dạng để lưu video).
+  - Hỗ trợ phím `Enter` trên bàn phím di động và máy tính để kích hoạt tìm kiếm nhanh.
+
+### [Changed]
+- Nâng cấp phiên bản PWA Service Worker Cache lên `yt-downloader-pwa-v2.3` và cache busting asset `?v=2.3`.
+
+---
+
 ## [2.2.0] — 2026-10-07
 
 ### [Fixed]

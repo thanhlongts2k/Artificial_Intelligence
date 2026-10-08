@@ -28,7 +28,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem;
+    padding: max(2rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
 }
 
 .container {
@@ -1033,4 +1033,251 @@ header p {
     color: #ffffff !important;
     pointer-events: none;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Speed Button Control */
+.speed-btn {
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    padding: 0.5rem 0.85rem !important;
+    color: var(--accent) !important;
+    border: 1px solid rgba(62, 166, 255, 0.3) !important;
+    background: rgba(62, 166, 255, 0.08) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.3rem !important;
+    border-radius: 20px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.speed-btn:hover {
+    background: rgba(62, 166, 255, 0.2) !important;
+    border-color: rgba(62, 166, 255, 0.6) !important;
+    transform: scale(1.05) !important;
+}
+
+.speed-btn:active {
+    transform: scale(0.95) !important;
+}
+
+/* YouTube Search Results Section */
+.search-results-section {
+    margin: 1.5rem 0 2rem 0;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 1.25rem;
+    animation: fadeInDown 0.4s ease-out;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.search-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.search-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.search-title-wrap h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+.search-title-wrap #searchKeywordBadge {
+    color: var(--accent);
+    word-break: break-all;
+}
+
+.search-count-badge {
+    background: rgba(255, 0, 0, 0.15);
+    color: #ff4d4d;
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+}
+
+.btn-close-search {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    color: var(--text-dim);
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-close-search:hover {
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff4d4d;
+    border-color: rgba(255, 0, 0, 0.4);
+}
+
+.search-results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+}
+
+@media (min-width: 680px) {
+    .search-results-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.search-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.search-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 0, 0, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.search-card-thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+}
+
+.search-card-thumb-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.search-card:hover .search-card-thumb-wrap img {
+    transform: scale(1.03);
+}
+
+.search-card-duration {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+    font-variant-numeric: tabular-nums;
+}
+
+.search-card-body {
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 0.4rem;
+}
+
+.search-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 2.4em;
+}
+
+.search-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    gap: 0.5rem;
+}
+
+.search-card-uploader {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #cccccc;
+}
+
+.search-card-views {
+    white-space: nowrap;
+    color: var(--accent);
+}
+
+.search-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-card-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-card-play {
+    background: linear-gradient(135deg, #ff0000, #cc0000);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3);
+}
+
+.btn-card-play:hover {
+    background: linear-gradient(135deg, #ff2626, #e60000);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.45);
+}
+
+.btn-card-download {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border: 1px solid var(--glass-border);
+}
+
+.btn-card-download:hover {
+    background: rgba(62, 166, 255, 0.2);
+    border-color: rgba(62, 166, 255, 0.5);
+    color: var(--accent);
+    transform: translateY(-1px);
 }

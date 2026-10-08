@@ -2,9 +2,9 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>YouTube Downloader - Tải Video Siêu Tốc</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3">
     <!-- PWA Configuration -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f0f0f">
@@ -30,7 +30,7 @@
                     <span class="pwa-text">Cài đặt App</span>
                 </button>
             </div>
-            <p>Dán link YouTube vào đây để trải nghiệm tốc độ tải cực đỉnh & nghe nhạc ngầm</p>
+            <p>Dán link hoặc tìm kiếm YouTube trực tiếp • Nghe nhạc & thời sự tắt màn hình</p>
         </header>
 
         <!-- iOS Install Guide Modal -->
@@ -53,13 +53,13 @@
 
         <main>
             <div class="search-box">
-                <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+                <input type="text" id="videoUrl" placeholder="Dán link YouTube hoặc gõ từ khóa (vd: thời sự 19h)..." autocomplete="off">
                 <div class="search-buttons">
                     <button id="pasteBtn" class="btn-secondary">
                         <span class="btn-text">Dán</span>
                     </button>
                     <button id="analyzeBtn" class="btn-primary">
-                        <span class="btn-text">Phân tích</span>
+                        <span class="btn-text">Tìm / Tải</span>
                     </button>
                 </div>
             </div>
@@ -77,9 +77,23 @@
                 </div>
             </div>
 
+            <!-- Khu vực hiển thị kết quả tìm kiếm YouTube -->
+            <div id="searchResultsSection" class="search-results-section" style="display: none;">
+                <div class="search-results-header">
+                    <div class="search-title-wrap">
+                        <h3>🔍 Kết quả tìm kiếm: <span id="searchKeywordBadge"></span></h3>
+                        <span id="searchCountBadge" class="search-count-badge"></span>
+                    </div>
+                    <button id="closeSearchBtn" class="btn-close-search" type="button" title="Đóng kết quả">✕ Đóng</button>
+                </div>
+                <div id="searchResultsList" class="search-results-grid">
+                    <!-- Dynamic search items -->
+                </div>
+            </div>
+
             <div id="loading" class="loading">
                 <div class="spinner"></div>
-                <p>Đang lấy thông tin video...</p>
+                <p id="loadingText">Đang xử lý yêu cầu...</p>
             </div>
 
             <div id="errorMsg" class="error-msg"></div>
@@ -143,6 +157,10 @@
                                             <span id="playPauseIcon">▶</span>
                                         </button>
                                         <button id="seekForwardBtn" class="control-btn" type="button" title="Tới 10 giây">10s ⏩</button>
+                                        <button id="speedBtn" class="control-btn speed-btn" type="button" title="Điều chỉnh tốc độ phát">
+                                            <span id="speedIcon">⚡</span>
+                                            <span id="speedLabel">1.0x</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -177,6 +195,6 @@
     </script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="{{ url_for('static', filename='main.js') }}?v=2.2"></script>
+    <script src="{{ url_for('static', filename='main.js') }}?v=2.3"></script>
 </body>
 </html>
