@@ -187,14 +187,22 @@
             </div>
 
         </main>
+
+        <footer class="app-footer">
+            <span class="app-version-badge" title="TubeX Phiên bản {{ app_version }}">
+                <span class="version-dot"></span>
+                <span>TubeX {{ app_version }}</span>
+            </span>
+        </footer>
     </div>
 
-    <!-- Pass host IP to JavaScript -->
+    <!-- Pass host IP and version to JavaScript -->
     <script>
         window.HOST_IP = "{{ host_ip }}";
+        window.APP_VERSION = "{{ app_version }}";
     </script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="{{ url_for('static', filename='main.js') }}?v=2.3"></script>
+    <script src="{{ url_for('static', filename='main.js') }}?v=2.3.1"></script>
 </body>
 </html>

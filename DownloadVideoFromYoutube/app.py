@@ -136,8 +136,15 @@ def extract_info_robust(base_opts, url, download=False):
     Trích xuất info video đa tầng (Multi-tier resilient extraction).
     Tự động thử các bộ client an toàn (android, visionos) và fallback nếu gặp lỗi
     'Sign in to confirm you're not a bot' từ IP Datacenter hoặc Cookie hết hạn.
+    Đồng thời tự động loại bỏ proxy và fallback sang kết nối trực tiếp nếu proxy
+    bị chết / trả về lỗi 402 Payment Required / 407 Proxy Auth / Tunnel connection failed.
     """
-    attempts = [
+    has_proxy = 'proxy' in base_opts
+    opts_no_proxy = {k: v for k, v in base_opts.items() if k != 'proxy'}
+
+    tier_groups = []
+    # Nhóm 1: Thử với cấu hình gốc (kèm proxy nếu được cấu hình)
+    tier_groups.append([
         # Tier 1: Cấu hình chuẩn với android + visionos
         base_opts,
         # Tier 2: Loại bỏ cookiefile (tránh cookie bị expire/flagged trên cloud) + android & visionos
@@ -146,21 +153,40 @@ def extract_info_robust(base_opts, url, download=False):
         {**{k: v for k, v in base_opts.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['visionos']}}},
         # Tier 4: Pure android không cookiefile
         {**{k: v for k, v in base_opts.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['android']}}},
-    ]
-    
+    ])
+
+    # Nhóm 2: Fallback trực tiếp không qua proxy (Direct Connection) nếu nhóm 1 có proxy và proxy bị lỗi
+    if has_proxy:
+        tier_groups.append([
+            # Tier Direct 1: Bỏ proxy, giữ nguyên android + visionos
+            opts_no_proxy,
+            # Tier Direct 2: Bỏ proxy + bỏ cookiefile
+            {**{k: v for k, v in opts_no_proxy.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['android', 'visionos']}}},
+            # Tier Direct 3: Bỏ proxy + pure visionos
+            {**{k: v for k, v in opts_no_proxy.items() if k != 'cookiefile'}, 'extractor_args': {'youtube': {'player_client': ['visionos']}}},
+        ])
+
     last_err = None
-    for i, opts in enumerate(attempts):
-        try:
-            ydl = yt_dlp.YoutubeDL(opts)
-            info = ydl.extract_info(url, download=download)
-            return info, ydl
-        except Exception as e:
-            last_err = e
-            err_str = str(e).lower()
-            is_recoverable = any(k in err_str for k in ['sign in', 'bot', 'confirm', 'requested format is not available', 'not available', 'login'])
-            if not is_recoverable and i == 0:
-                raise e
-            logging.warning(f"[!] Extraction tier {i+1} failed ({str(e)[:80]}). Retrying next tier...")
+    for group_idx, attempts in enumerate(tier_groups):
+        for i, opts in enumerate(attempts):
+            try:
+                ydl = yt_dlp.YoutubeDL(opts)
+                info = ydl.extract_info(url, download=download)
+                return info, ydl
+            except Exception as e:
+                last_err = e
+                err_str = str(e).lower()
+                is_proxy_failure = any(k in err_str for k in ['tunnel', '402', '407', 'proxy', 'refused', 'timeout', 'timed out'])
+                is_recoverable = is_proxy_failure or any(k in err_str for k in ['sign in', 'bot', 'confirm', 'requested format is not available', 'not available', 'login'])
+
+                # Nếu là lỗi do Proxy và đang ở nhóm có proxy, lập tức nhảy qua nhóm Direct connection (không tốn thời gian lặp các tier proxy khác)
+                if is_proxy_failure and group_idx == 0 and has_proxy:
+                    logging.warning(f"[!] Proxy extraction failed ({str(e)[:80]}). Chuyển ngay sang nhóm Fallback Direct Connection...")
+                    break
+
+                if not is_recoverable and i == 0 and not has_proxy:
+                    raise e
+                logging.warning(f"[!] Extraction tier {i+1} failed ({str(e)[:80]}). Retrying next tier...")
     raise last_err
 
 def get_lan_ip():
@@ -218,45 +244,61 @@ def search_videos():
         'no_warnings': True,
     })
     
+    search_target = f"ytsearch{limit}:{query}"
+    
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            search_target = f"ytsearch{limit}:{query}"
             res = ydl.extract_info(search_target, download=False)
-            entries = res.get('entries', []) or []
-            
-            results = []
-            for entry in entries:
-                if not entry or not entry.get('id'):
-                    continue
-                video_id = entry.get('id')
-                duration = entry.get('duration') or 0
-                thumbs = entry.get('thumbnails') or []
-                thumb_url = thumbs[-1].get('url') if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-                
-                results.append({
-                    'id': video_id,
-                    'title': entry.get('title') or 'Không có tiêu đề',
-                    'url': f"https://www.youtube.com/watch?v={video_id}",
-                    'uploader': entry.get('uploader') or entry.get('channel') or 'YouTube',
-                    'duration': duration,
-                    'duration_formatted': format_duration(duration),
-                    'thumbnail': thumb_url,
-                    'view_count': entry.get('view_count'),
-                    'view_count_formatted': format_views(entry.get('view_count')),
-                })
-            
-            return jsonify({
-                'query': query,
-                'count': len(results),
-                'results': results
-            })
     except Exception as e:
-        logging.error(f'Lỗi tìm kiếm YouTube với từ khóa "{query}": {str(e)}')
-        return jsonify({'error': f"Lỗi tìm kiếm: {str(e)}"}), 500
+        err_str = str(e).lower()
+        is_proxy_failure = any(k in err_str for k in ['tunnel', '402', '407', 'proxy', 'refused', 'timeout', 'timed out'])
+        if is_proxy_failure and 'proxy' in ydl_opts:
+            logging.warning(f"[!] Tìm kiếm qua Proxy thất bại ({str(e)[:80]}). Tự động fallback sang kết nối trực tiếp (Direct Connection)...")
+            ydl_opts_direct = {k: v for k, v in ydl_opts.items() if k != 'proxy'}
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts_direct) as ydl_direct:
+                    res = ydl_direct.extract_info(search_target, download=False)
+            except Exception as e2:
+                logging.error(f'Lỗi tìm kiếm YouTube (direct fallback thất bại) với từ khóa "{query}": {str(e2)}')
+                return jsonify({'error': f"Lỗi tìm kiếm: {str(e2)}"}), 500
+        else:
+            logging.error(f'Lỗi tìm kiếm YouTube với từ khóa "{query}": {str(e)}')
+            return jsonify({'error': f"Lỗi tìm kiếm: {str(e)}"}), 500
+
+    entries = res.get('entries', []) or []
+    
+    results = []
+    for entry in entries:
+        if not entry or not entry.get('id'):
+            continue
+        video_id = entry.get('id')
+        duration = entry.get('duration') or 0
+        thumbs = entry.get('thumbnails') or []
+        thumb_url = thumbs[-1].get('url') if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+        
+        results.append({
+            'id': video_id,
+            'title': entry.get('title') or 'Không có tiêu đề',
+            'url': f"https://www.youtube.com/watch?v={video_id}",
+            'uploader': entry.get('uploader') or entry.get('channel') or 'YouTube',
+            'duration': duration,
+            'duration_formatted': format_duration(duration),
+            'thumbnail': thumb_url,
+            'view_count': entry.get('view_count'),
+            'view_count_formatted': format_views(entry.get('view_count')),
+        })
+    
+    return jsonify({
+        'query': query,
+        'count': len(results),
+        'results': results
+    })
+
+APP_VERSION = "v2.3.1"
 
 @app.route('/')
 def home():
-    return render_template('index.html', host_ip=get_lan_ip())
+    return render_template('index.html', host_ip=get_lan_ip(), app_version=APP_VERSION)
 
 @app.route('/manifest.json')
 def serve_manifest():
@@ -605,7 +647,16 @@ def stream_media():
         else:
             opener = urllib.request.build_opener()
 
-        upstream_resp = opener.open(req, timeout=25)
+        try:
+            upstream_resp = opener.open(req, timeout=25)
+        except (urllib.error.HTTPError, urllib.error.URLError, Exception) as ue:
+            ue_str = str(ue).lower()
+            if active_proxy and any(k in ue_str for k in ['tunnel', '402', '407', 'proxy', 'refused']):
+                logging.warning(f"[!] Upstream stream qua Proxy thất bại ({ue_str[:80]}). Thử lại bằng kết nối trực tiếp...")
+                opener = urllib.request.build_opener()
+                upstream_resp = opener.open(req, timeout=25)
+            else:
+                raise ue
         status_code = upstream_resp.status
         
         response_headers = {

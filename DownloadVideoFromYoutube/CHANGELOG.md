@@ -4,6 +4,20 @@ Tất cả các thay đổi quan trọng của dự án **YouTube Downloader (Fl
 
 ---
 
+## [2.3.1] — 2026-10-08
+
+### [Added]
+- **Huy hiệu hiển thị phiên bản (Version Badge Footer)**:
+  - Bổ sung huy hiệu phiên bản tinh tế `TubeX v2.3.1` kèm đèn tín hiệu xung xanh (pulsing status indicator) ở cuối trang giúp người dùng nhận biết ngay phiên bản hiện tại đã được cập nhật thành công.
+
+### [Fixed]
+- **Khắc phục lỗi Tunnel 402 Payment Required & Proxy Failure**:
+  - Triển khai cơ chế **Proxy Auto-Fallback Engine**: khi proxy gặp lỗi cạn băng thông (`402 Payment Required`), hết hạn gói cước, lỗi xác thực (`407`) hoặc rớt kết nối (`Tunnel failed / Connection refused`), hệ thống tự động loại bỏ proxy và fallback sang kết nối trực tiếp (Direct Connection).
+  - Tích hợp fallback trực tiếp cho API tìm kiếm (`/api/search`), trích xuất thông tin (`/api/info`), luồng phát ngầm (`/api/stream`) và tải tệp (`/api/download`).
+  - Tối ưu hóa `extract_info_robust` với cơ chế nhóm phân tầng (Two-group multi-tier): nhận diện lỗi proxy và chuyển ngay sang nhóm Direct Connection trong ~1.7s thay vì thử lại các tier proxy đã chết.
+
+---
+
 ## [2.3.0] — 2026-10-08
 
 ### [Added]
